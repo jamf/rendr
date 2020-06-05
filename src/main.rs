@@ -13,7 +13,6 @@ fn main() {
 }
 
 fn init(matches: &ArgMatches) {
-    // Gets a value for config if supplied by user, or defaults to "default.conf"
     let template = matches.value_of("template").unwrap();
     let name = matches.value_of("name").unwrap();
     let dir = matches.value_of("dir").unwrap_or(name);
