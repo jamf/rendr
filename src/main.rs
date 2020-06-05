@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate clap;
 use clap::{App, ArgMatches};
+use git2::Repository;
 
 fn main() {
     let yaml = load_yaml!("cli.yml");
@@ -23,4 +24,9 @@ fn init(matches: &ArgMatches) {
         template,
         dir,
     );
+
+    let _repo = match Repository::clone(template, dir) {
+        Ok(repo) => repo,
+        Err(e)   => panic!("failed to init: {}", e),
+    };
 }
