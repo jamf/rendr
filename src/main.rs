@@ -1,5 +1,12 @@
+mod templating;
+
+use std::io;
+use std::fs;
+use std::path::Path;
+
 use clap::{App, ArgMatches, load_yaml};
 use git2::Repository;
+use mustache::MapBuilder;
 
 fn main() {
     let yaml = load_yaml!("cli.yml");
@@ -26,4 +33,35 @@ fn init(matches: &ArgMatches) {
         Ok(repo) => repo,
         Err(e)   => panic!("failed to init: {}", e),
     };
+
+    fs::create_dir("output");
+
+    let output_dir = Path::new(format!("{}/{}", dir, "output"));
+
+    if output_dir.is_dir() {
+        for entry in fs::read_dir(dir).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if path.is_file() {
+                let filename = path.file_name().unwrap().to_str().unwrap();
+                let contents = fs::read_to_string(&path).unwrap();
+
+                contents = render_template(&contents);
+
+                fs::write(format!("output/{}", filename), &contents).unwrap();
+            }
+        }
+    }
+}
+
+fn render_template(s: &str) -> String {
+    let template = mustache::compile_str(s).unwrap();
+
+    let data = MapBuilder::new()
+        .insert_str("name", "Venus")
+        .insert_str("version", "0.1.0")
+        .insert_str("foobar", "42")
+        .build();
+
+    template.render_data_to_string(&data).unwrap()
 }
