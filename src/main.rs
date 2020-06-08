@@ -1,6 +1,4 @@
-#[macro_use]
-extern crate clap;
-use clap::{App, ArgMatches};
+use clap::{App, ArgMatches, load_yaml};
 use git2::Repository;
 
 fn main() {
