@@ -1,6 +1,5 @@
 mod templating;
 
-use std::io;
 use std::fs;
 use std::path::Path;
 
@@ -34,19 +33,21 @@ fn init(matches: &ArgMatches) {
         Err(e)   => panic!("failed to init: {}", e),
     };
 
-    fs::create_dir("output");
+    fs::create_dir("output").unwrap();
 
-    let output_dir = Path::new(format!("{}/{}", dir, "output"));
+    let output_dir = Path::new("output");
+
+    let blueprint_dir = format!("{}/blueprint", dir);
 
     if output_dir.is_dir() {
-        for entry in fs::read_dir(dir).unwrap() {
+        for entry in fs::read_dir(&blueprint_dir).unwrap() {
             let entry = entry.unwrap();
             let path = entry.path();
             if path.is_file() {
                 let filename = path.file_name().unwrap().to_str().unwrap();
                 let contents = fs::read_to_string(&path).unwrap();
 
-                contents = render_template(&contents);
+                let contents = render_template(&contents);
 
                 fs::write(format!("output/{}", filename), &contents).unwrap();
             }
