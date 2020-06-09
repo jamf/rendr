@@ -21,10 +21,9 @@ fn init(matches: &ArgMatches) {
     let name = matches.value_of("name").unwrap();
     let dir = matches.value_of("dir").unwrap_or(name);
 
-    let values = matches.values_of("value").map(|vs| vs.map(parse_value));
-
+    let values = matches.values_of("value");
     let values: HashMap<&str, &str> = match values {
-        Some(values) => values.collect(),
+        Some(values) => values.map(parse_value).collect(),
         None         => HashMap::new(),
     };
 
@@ -35,10 +34,9 @@ fn init(matches: &ArgMatches) {
         dir,
     );
 
-    let _repo = match Repository::clone(template, dir) {
-        Ok(repo) => repo,
-        Err(e)   => panic!("failed to init: {}", e),
-    };
+    if let Err(e) = Repository::clone(template, dir) {
+        panic!("failed to init: {}", e);
+    }
 
     fs::create_dir("output").unwrap();
 
@@ -62,6 +60,7 @@ fn init(matches: &ArgMatches) {
     }
 }
 
+// Parse a string of "key:value" form into a tuple of (key, value).
 fn parse_value(s: &str) -> (&str, &str) {
     let pos = s.find(":").unwrap();
     s.split_at(pos)
