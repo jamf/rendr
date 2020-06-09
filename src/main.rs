@@ -1,5 +1,6 @@
 mod templating;
 
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -19,6 +20,13 @@ fn init(matches: &ArgMatches) {
     let template = matches.value_of("template").unwrap();
     let name = matches.value_of("name").unwrap();
     let dir = matches.value_of("dir").unwrap_or(name);
+
+    let values = matches.values_of("value").map(|vs| vs.map(parse_value));
+
+    let values: HashMap<&str, &str> = match values {
+        Some(values) => values.collect(),
+        None         => HashMap::new(),
+    };
 
     println!(
         "Generating project {} from template {}. Directory: {}",
@@ -46,10 +54,15 @@ fn init(matches: &ArgMatches) {
                 let filename = path.file_name().unwrap().to_str().unwrap();
                 let contents = fs::read_to_string(&path).unwrap();
 
-                let contents = templating::render_template(&contents);
+                let contents = templating::render_template(&contents, &values);
 
                 fs::write(format!("output/{}", filename), &contents).unwrap();
             }
         }
     }
+}
+
+fn parse_value(s: &str) -> (&str, &str) {
+    let pos = s.find(":").unwrap();
+    s.split_at(pos)
 }

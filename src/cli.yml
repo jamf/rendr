@@ -3,42 +3,33 @@ version: "0.1"
 author: Brian S. <brian.steward@jamf.com>, Tomasz K. <tomasz.kurcz@jamf.com>
 about: A project scaffolding tool.
 args:
-    # - INPUT:
-    #     help: Sets the input file to use
-    #     required: true
-    #     index: 1
-    # - verbose:
-    #     short: v
-    #     multiple: true
-    #     help: Sets the level of verbosity
+  # - verbose:
+  #     short: v
+  #     multiple: true
+  #     help: Sets the level of verbosity
 subcommands:
-    - init:
-        about: Initializes a project from a template.
-        # version: "1.3"
-        args:
-            - template:
-                short: t
-                long: template
-                required: true
-                help: The URI of the template repo.
-                takes_value: true
-            - name:
-                required: true
-                help: The name of the project.
-                takes_value: true
-            - dir:
-                short: d
-                long: dir
-                help: The output directory name.
-                takes_value: true
-            # - debug:
-            #     short: d
-            #     help: print debug information
-    # - test:
-    #     about: controls testing features
-    #     version: "1.3"
-    #     author: Someone E. <someone_else@other.com>
-    #     args:
-    #         - debug:
-    #             short: d
-    #             help: print debug information
+  - init:
+      about: Initializes a project from a template.
+      # version: "1.3"
+      args:
+        - template:
+            short: t
+            long: template
+            required: true
+            help: The URI of the template repo.
+            takes_value: true
+        - name:
+            required: true
+            help: The name of the project.
+            takes_value: true
+        - dir:
+            short: d
+            long: dir
+            help: The output directory name.
+            takes_value: true
+        - value:
+            short: v
+            long: value
+            help: Value(s) to render the blueprint with. Currently only supports strings.
+            takes_value: true
+            multiple: true
