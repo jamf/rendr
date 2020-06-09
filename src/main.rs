@@ -18,6 +18,7 @@ fn main() {
 }
 
 fn init(matches: &ArgMatches) {
+    // Parse CLI arguments.
     let template = matches.value_of("template").unwrap();
     let name = matches.value_of("name").unwrap();
     let output_dir = Path::new(matches.value_of("dir").unwrap_or(name));
@@ -35,28 +36,31 @@ fn init(matches: &ArgMatches) {
         output_dir.to_str().unwrap(),
     );
 
+    // Check out the blueprint into a new temporary directory.
     let blueprint_dir = TempDir::new("checked_out_blueprint").unwrap();
 
     if let Err(e) = Repository::clone(template, &blueprint_dir) {
         panic!("failed to init: {}", e);
     }
 
+    // Create our output directory.
     fs::create_dir(output_dir).unwrap();
 
+    // Iterate through the blueprint templates and render them into our output
+    // directory.  
     if output_dir.is_dir() {
         for entry in fs::read_dir(&blueprint_dir.path().join("blueprint")).unwrap() {
             let entry = entry.unwrap();
             let path = entry.path();
 
-            println!("Found file {:?}", &path);
-
             if path.is_file() {
+                println!("Found file {:?}", &path);
+
                 let filename = path.file_name().unwrap().to_str().unwrap();
                 let contents = fs::read_to_string(&path).unwrap();
 
                 let contents = templating::render_template(&contents, &values);
 
-                //fs::write(format!("output/{}", filename), &contents).unwrap();
                 fs::write(output_dir.join(filename), &contents).unwrap();
             }
         }
