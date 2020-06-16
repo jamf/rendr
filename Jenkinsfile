@@ -25,5 +25,3 @@ pipeline {
         }
     }
 }
-
-// docker run --rm -it -v "$PWD":/usr/src/myapp -w /usr/src/myapp docker.jamf.build/rust:1.44.0 cargo build --release
