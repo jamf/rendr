@@ -17,11 +17,11 @@ pipeline {
                                 spec:
                                 containers:
                                 - name: rust
-                                    image: docker.jamf.build/rust:1.44.0
-                                    tty: true
-                                    command:
-                                    - cat
-                                '''
+                                  image: docker.jamf.build/rust:1.44.0
+                                  tty: true
+                                  command:
+                                  - cat
+                            '''
                         }
                     }
 
