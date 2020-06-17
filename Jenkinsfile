@@ -1,26 +1,30 @@
+@Library(['tools', "client-apps"]) _
+
 pipeline {
-    agent {
-        kubernetes {
-            label 'rust'
-            defaultContainer 'rust'
-            yaml '''
-                apiVersion: v1
-                kind: Pod
-                spec:
-                  containers:
-                  - name: rust
-                    image: docker.jamf.build/rust:1.44.0
-                    tty: true
-                    command:
-                    - cat
-                '''
-        }
-    }
+    agent none
 
     stages {
-        stage('Build') {
+        stage('Build') {            
             parallel {
                 stage('Linux build') {
+                    agent {
+                        kubernetes {
+                            label 'rust'
+                            defaultContainer 'rust'
+                            yaml '''
+                                apiVersion: v1
+                                kind: Pod
+                                spec:
+                                containers:
+                                - name: rust
+                                    image: docker.jamf.build/rust:1.44.0
+                                    tty: true
+                                    command:
+                                    - cat
+                                '''
+                        }
+                    }
+
                     steps {
                         sh 'cargo build --release'
                         sh 'mv target/release/express express-linux'
