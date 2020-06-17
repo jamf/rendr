@@ -16,11 +16,28 @@ pipeline {
                 '''
         }
     }
+
     stages {
         stage('Build') {
-            steps {
-                sh 'cargo build --release'
-                archiveArtifacts 'target/release/express'
+            parallel {
+                stage('Linux build') {
+                    steps {
+                        sh 'cargo build --release'
+                        sh 'mv target/release/express express-linux'
+                        archiveArtifacts 'express-linux'
+                    }
+                }
+
+                stage('macOS build') {
+                    agent { label "${anka 'macos.10.15-build'}" }
+
+                    steps {
+                        sh 'brew install rust'
+                        sh 'cargo build --release'
+                        sh 'mv target/release/express express-darwin'
+                        archiveArtifacts 'express-darwin'
+                    }
+                }
             }
         }
     }
