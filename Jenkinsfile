@@ -15,12 +15,12 @@ pipeline {
                                 apiVersion: v1
                                 kind: Pod
                                 spec:
-                                containers:
-                                - name: rust
-                                  image: docker.jamf.build/rust:1.44.0
-                                  tty: true
-                                  command:
-                                  - cat
+                                  containers:
+                                  - name: rust
+                                    image: docker.jamf.build/rust:1.44.0
+                                    tty: true
+                                    command:
+                                    - cat
                             '''
                         }
                     }
