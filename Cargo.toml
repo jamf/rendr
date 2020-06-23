@@ -4,11 +4,6 @@ version = "0.1.0"
 authors = ["Brian Steward <brian.steward@jamf.com>", "Tomasz Kurcz <tomasz.kurcz@jamf.com>"]
 edition = "2018"
 
-# [[bin]]
-# name = "express"
-# test = false
-# bench = false
-
 [dependencies]
 clap = { version = "2.33", features = ["yaml"] }
 git2 = "0.13"
