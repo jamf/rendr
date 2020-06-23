@@ -1,3 +1,5 @@
+use std::result::Result;
+use std::error::Error;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -8,67 +10,98 @@ use tempdir::TempDir;
 
 use express::templating;
 
+type DynError = Box<dyn Error>;
+
 fn main() {
+    if let Err(err) = run_app() {
+        #[cfg(debug)]
+        eprintln!("Error: {:?}", err);
+
+        #[cfg(not(debug))]
+        eprintln!("Error: {}", err);
+
+        std::process::exit(1);
+    }
+}
+
+fn run_app() -> Result<(), DynError> {
     let yaml = load_yaml!("cli.yml");
     let matches = App::from_yaml(yaml).get_matches();
 
     if let Some(matches) = matches.subcommand_matches("init") {
-        init(matches);
+        init(matches)?;
     }
+
+    Ok(())
 }
 
-fn init(matches: &ArgMatches) {
+// ***********************
+// * Subcommand handlers *
+// ***********************
+
+fn init(matches: &ArgMatches) -> Result<(), DynError> {
     // Parse CLI arguments.
     let template = matches.value_of("template").unwrap();
     let name = matches.value_of("name").unwrap();
     let output_dir = Path::new(matches.value_of("dir").unwrap_or(name));
 
     let values = matches.values_of("value");
+
     let values: HashMap<&str, &str> = match values {
         Some(values) => values.map(parse_value).collect(),
-        None         => HashMap::new(),
-    };
+        None         => Ok(HashMap::new()),
+    }?;
 
     println!(
         "Generating project {} from template {}. Directory: {}",
         name,
         template,
-        output_dir.to_str().unwrap(),
+        output_dir.to_str()
+            .expect("Invalid utf8 in output_dir. This panic shouldn't happen!"),
     );
 
     // Check out the blueprint into a new temporary directory.
-    let blueprint_dir = TempDir::new("checked_out_blueprint").unwrap();
+    let blueprint_dir = TempDir::new("checked_out_blueprint")?;
 
-    if let Err(e) = Repository::clone(template, &blueprint_dir) {
-        panic!("failed to init: {}", e);
-    }
+    Repository::clone(template, &blueprint_dir)?;
 
     // Create our output directory.
-    fs::create_dir(output_dir).unwrap();
+    fs::create_dir(output_dir)?;
 
     // Iterate through the blueprint templates and render them into our output
     // directory.  
     if output_dir.is_dir() {
-        for entry in fs::read_dir(&blueprint_dir.path().join("blueprint")).unwrap() {
-            let entry = entry.unwrap();
-            let path = entry.path();
+        for entry in fs::read_dir(&blueprint_dir.path().join("blueprint"))? {
+            let path = entry?.path();
 
             if path.is_file() {
                 println!("Found file {:?}", &path);
 
-                let filename = path.file_name().unwrap().to_str().unwrap();
-                let contents = fs::read_to_string(&path).unwrap();
+                let filename = path.file_name()
+                    .unwrap()
+                    .to_str()
+                    .expect("Invalid utf8 in output_dir. This panic shouldn't happen!");
 
-                let contents = templating::render_template(&contents, &values).unwrap();
+                let contents = fs::read_to_string(&path)?;
 
-                fs::write(output_dir.join(filename), &contents).unwrap();
+                let contents = templating::render_template(&contents, &values)?;
+
+                fs::write(output_dir.join(filename), &contents)?;
             }
         }
     }
+
+    Ok(())
 }
 
+// ***********
+// * Helpers *
+// ***********
+
 // Parse a string of "key:value" form into a tuple of (key, value).
-fn parse_value(s: &str) -> (&str, &str) {
-    let pos = s.find(":").unwrap();
-    s.split_at(pos)
+fn parse_value(s: &str) -> Result<(&str, &str), String> {
+    let pos = s.find(":")
+        .ok_or(format!("Invalid value `{}`", s))?;
+
+    Ok(s.split_at(pos))
 }

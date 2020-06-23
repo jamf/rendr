@@ -4,6 +4,7 @@ author: Brian S. <brian.steward@jamf.com>, Tomasz K. <tomasz.kurcz@jamf.com>
 about: A project scaffolding tool.
 settings:
   - ArgRequiredElseHelp
+  - StrictUtf8
 args:
   # - verbose:
   #     short: v

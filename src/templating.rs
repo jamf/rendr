@@ -1,3 +1,5 @@
+use std::fmt::Display;
+use std::fmt::Formatter;
 use std::error::Error;
 use std::collections::HashMap;
 
@@ -12,12 +14,20 @@ pub struct RenderError {
     inner: Box<dyn Error>,
 }
 
-// Implicit conversion of any error type to the RenderError wrapper. This is so
-// that we can use the ? shorthand and so that life is easy.
-impl<E: Error + 'static> From<E> for RenderError {
-    fn from(err: E) -> Self {
+impl Display for RenderError {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "template rendering failed: {}", self.inner)?;
+
+        Ok(())
+    }
+}
+
+impl Error for RenderError {}
+
+impl From<mustache::Error> for RenderError {
+    fn from(e: mustache::Error) -> Self {
         RenderError {
-            inner: Box::new(err),
+            inner: Box::new(e),
         }
     }
 }
