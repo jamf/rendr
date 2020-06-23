@@ -2,6 +2,8 @@ name: express
 version: "0.1"
 author: Brian S. <brian.steward@jamf.com>, Tomasz K. <tomasz.kurcz@jamf.com>
 about: A project scaffolding tool.
+settings:
+  - ArgRequiredElseHelp
 args:
   # - verbose:
   #     short: v
