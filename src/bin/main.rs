@@ -59,7 +59,7 @@ fn init(matches: &ArgMatches) {
                 let filename = path.file_name().unwrap().to_str().unwrap();
                 let contents = fs::read_to_string(&path).unwrap();
 
-                let contents = templating::render_template(&contents, &values);
+                let contents = templating::render_template(&contents, &values).unwrap();
 
                 fs::write(output_dir.join(filename), &contents).unwrap();
             }
