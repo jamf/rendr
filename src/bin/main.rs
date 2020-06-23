@@ -1,5 +1,3 @@
-mod templating;
-
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -7,6 +5,8 @@ use std::path::Path;
 use clap::{App, ArgMatches, load_yaml};
 use git2::Repository;
 use tempdir::TempDir;
+
+use express::templating;
 
 fn main() {
     let yaml = load_yaml!("cli.yml");
