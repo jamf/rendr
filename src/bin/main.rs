@@ -80,7 +80,7 @@ fn init(matches: &ArgMatches) -> Result<(), DynError> {
                 let filename = path.file_name()
                     .unwrap()
                     .to_str()
-                    .expect("Invalid utf8 in output_dir. This panic shouldn't happen!");
+                    .expect("Invalid utf8 in filepath.");
 
                 let contents = fs::read_to_string(&path)?;
 
