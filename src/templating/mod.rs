@@ -28,18 +28,3 @@ impl Display for RenderError {
 }
 
 impl Error for RenderError {}
-
-#[test]
-fn render_valid_template() {
-    let template = "name: {{ name }}, value: {{ value }}";
-
-    let values: HashMap<_, _> = [("name", "foo"), ("value", "bar"), ("asd", "dsa")]
-        .iter().cloned().collect();
-
-    assert_eq!(
-        Mustache::new()
-            .render_template(template, &values)
-            .unwrap(),
-        "name: foo, value: bar",
-    );
-}
