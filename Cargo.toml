@@ -3,11 +3,12 @@ name = "express"
 version = "0.1.0"
 authors = ["Brian Steward <brian.steward@jamf.com>", "Tomasz Kurcz <tomasz.kurcz@jamf.com>"]
 edition = "2018"
+build = "build.rs"
+autobins = false
 
-# [[bin]]
-# name = "express"
-# test = false
-# bench = false
+[[bin]]
+name = "express"
+path = "src/bin/main.rs"
 
 [dependencies]
 clap = { version = "2.33", features = ["yaml"] }
