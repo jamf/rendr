@@ -7,7 +7,7 @@ use clap::ArgMatches;
 use git2::Repository;
 use tempdir::TempDir;
 
-use express::templating;
+use express::templating::{self, TemplatingEngine};
 
 type DynError = Box<dyn Error>;
 
@@ -56,7 +56,9 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
 
                 let contents = fs::read_to_string(&path)?;
 
-                let contents = templating::render_template(&contents, &values)?;
+                let templating_engine = templating::Mustache::new();
+
+                let contents = templating_engine.render_template(&contents, &values)?;
 
                 fs::write(output_dir.join(filename), &contents)?;
             }

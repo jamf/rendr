@@ -1,12 +1,17 @@
+mod mustache;
+pub use self::mustache::Mustache;
+
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::error::Error;
 use std::collections::HashMap;
 
-pub fn render_template(template: &str, values: &HashMap<&str, &str>) -> Result<String, RenderError> {
-    let template = mustache::compile_str(template)?;
-
-    Ok(template.render_to_string(&values)?)
+pub trait TemplatingEngine {
+    fn render_template(
+        &self,
+        template: &str,
+        values: &HashMap<&str, &str>,
+    ) -> Result<String, RenderError>;
 }
 
 #[derive(Debug)]
@@ -24,14 +29,6 @@ impl Display for RenderError {
 
 impl Error for RenderError {}
 
-impl From<mustache::Error> for RenderError {
-    fn from(e: mustache::Error) -> Self {
-        RenderError {
-            inner: Box::new(e),
-        }
-    }
-}
-
 #[test]
 fn render_valid_template() {
     let template = "name: {{ name }}, value: {{ value }}";
@@ -40,7 +37,9 @@ fn render_valid_template() {
         .iter().cloned().collect();
 
     assert_eq!(
-        render_template(template, &values).unwrap(),
+        Mustache::new()
+            .render_template(template, &values)
+            .unwrap(),
         "name: foo, value: bar",
     );
 }
