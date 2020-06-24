@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use super::{TemplatingEngine, RenderError};
 
+/// [{{ mustache }}](https://mustache.github.io/) is a simple, logic-less templating engine.
 pub struct Mustache {}
 
 impl Mustache {
