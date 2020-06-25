@@ -1,13 +1,11 @@
 use std::error::Error;
 use std::collections::HashMap;
-use std::fs;
 use std::path::Path;
 
 use clap::ArgMatches;
-use git2::Repository;
-use tempdir::TempDir;
 
-use express::templating::{self, TemplatingEngine};
+use express::templating;
+use express::blueprint::Blueprint;
 
 type DynError = Box<dyn Error>;
 
@@ -32,38 +30,11 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
             .expect("Invalid utf8 in output_dir. This panic shouldn't happen!"),
     );
 
-    // Check out the blueprint into a new temporary directory.
-    let blueprint_dir = TempDir::new("checked_out_blueprint")?;
+    let blueprint = Blueprint::from_remote_repo(template)?;
 
-    Repository::clone(template, &blueprint_dir)?;
+    let mustache = templating::Mustache::new();
 
-    // Create our output directory.
-    fs::create_dir(output_dir)?;
-
-    // Iterate through the blueprint templates and render them into our output
-    // directory.  
-    if output_dir.is_dir() {
-        for entry in fs::read_dir(&blueprint_dir.path().join("blueprint"))? {
-            let path = entry?.path();
-
-            if path.is_file() {
-                println!("Found file {:?}", &path);
-
-                let filename = path.file_name()
-                    .unwrap()
-                    .to_str()
-                    .expect("Invalid utf8 in filepath.");
-
-                let contents = fs::read_to_string(&path)?;
-
-                let templating_engine = templating::Mustache::new();
-
-                let contents = templating_engine.render_template(&contents, &values)?;
-
-                fs::write(output_dir.join(filename), &contents)?;
-            }
-        }
-    }
+    blueprint.render(&mustache, &values, &output_dir)?;
 
     Ok(())
 }
