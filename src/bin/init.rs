@@ -44,5 +44,16 @@ fn parse_value(s: &str) -> Result<(&str, &str), String> {
     let pos = s.find(":")
         .ok_or(format!("Invalid value `{}`", s))?;
 
-    Ok(s.split_at(pos))
+    let mut result = s.split_at(pos);
+    result.1 = &result.1[1..];
+
+    Ok(result)
+}
+
+#[test]
+fn correct_values_are_parsed_correctly() {
+    let (foo, bar) = parse_value("foo:bar").unwrap();
+
+    assert_eq!(foo, "foo");
+    assert_eq!(bar, "bar");
 }
