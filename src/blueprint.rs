@@ -1,3 +1,5 @@
+use std::fmt::Display;
+use std::fmt::Formatter;
 use std::collections::HashMap;
 use std::path::Path;
 use std::error::Error;
@@ -5,13 +7,41 @@ use std::fs;
 
 use tempdir::TempDir;
 use git2::Repository;
+use serde::Deserialize;
+use serde_yaml;
 
 use crate::templating::TemplatingEngine;
 
 type DynError = Box<dyn Error>;
 
 pub struct Blueprint {
+    metadata: BlueprintMetadata,
     dir: TempDir,
+}
+
+impl Display for Blueprint {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        writeln!(f, "{} v{}", &self.metadata.name, &self.metadata.version)?;
+        writeln!(f, "{}", &self.metadata.author)?;
+        writeln!(f, "{}", &self.metadata.about)?;
+        
+        Ok(())
+    }
+}
+
+#[derive(Deserialize)]
+struct BlueprintMetadata {
+    name: String,
+    version: u32,
+    author: String,
+    about: String,
+    values: HashMap<String, Value>,
+}
+
+#[derive(Deserialize)]
+struct Value {
+    desc: String,
+    default: Option<String>,
 }
 
 impl Blueprint {
@@ -20,7 +50,12 @@ impl Blueprint {
 
         Repository::clone(url, &dir)?;
 
+        let meta_raw = fs::read_to_string(dir.path().join("metadata.yaml"))?;
+
+        let metadata = serde_yaml::from_str(&meta_raw)?;
+
         Ok(Blueprint {
+            metadata,
             dir,
         })
     }

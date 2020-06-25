@@ -16,3 +16,5 @@ git2 = "0.13"
 mustache = "0.9"
 tempdir = "0.3"
 openssl = { version = "0.10", features = ["vendored"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.8"

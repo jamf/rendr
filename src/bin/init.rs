@@ -22,15 +22,14 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
         None         => Ok(HashMap::new()),
     }?;
 
+    let blueprint = Blueprint::from_remote_repo(template)?;
+
+    println!("{}", blueprint);
     println!(
-        "Generating project {} from template {}. Directory: {}",
-        name,
-        template,
+        "Output directory: {}",
         output_dir.to_str()
             .expect("Invalid utf8 in output_dir. This panic shouldn't happen!"),
     );
-
-    let blueprint = Blueprint::from_remote_repo(template)?;
 
     let mustache = templating::Mustache::new();
 
