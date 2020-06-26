@@ -109,7 +109,7 @@ mod tests {
 
         assert_eq!(blueprint.metadata.name, "example-blueprint");
         assert_eq!(blueprint.metadata.version, 1);
-        assert_eq!(blueprint.metadata.author, "Brian S. <brian.steward@jamf.com>, Tomasz K. <tomasz.kurcz@jamf.com>");
+        assert_eq!(blueprint.metadata.author, "Brian S. <brian.stewart@jamf.com>, Tomasz K. <tomasz.kurcz@jamf.com>");
         assert_eq!(blueprint.metadata.about, "Just an example blueprint for `express`.");
     }
 
