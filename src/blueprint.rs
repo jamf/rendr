@@ -132,6 +132,7 @@ struct Value {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+    use std::fs;
     use tempdir::TempDir;
     use crate::blueprint::Blueprint;
     use crate::templating::Mustache;
@@ -158,5 +159,13 @@ mod tests {
         let mustache = Mustache::new();
 
         blueprint.render(&mustache, &values, output_dir.path()).unwrap();
+
+        let test = fs::read_to_string(output_dir.path().join("test.yaml")).unwrap();
+        let another_test = fs::read_to_string(output_dir.path().join("another-test.yaml")).unwrap();
+
+        assert!(test.find("name: my-project").is_some());
+        assert!(test.find("version: 1").is_some());
+        assert!(another_test.find("stuff: stuff").is_some());
+        assert!(another_test.find("version: 1").is_some());
     }
 }
