@@ -1,0 +1,10 @@
+name: example-blueprint
+version: 1
+author: Brian S. <brian.stewart@jamf.com>, Tomasz K. <tomasz.kurcz@jamf.com>
+description: Just an example blueprint for `express`.
+values:
+- name: name
+  description: The name of your project
+- name: version
+  description: The version of your project
+  default: 1
