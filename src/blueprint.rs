@@ -168,4 +168,23 @@ mod tests {
         assert!(another_test.find("stuff: stuff").is_some());
         assert!(another_test.find("version: 1").is_some());
     }
+
+    #[test]
+    fn render_example_blueprint_recursive() {
+        let blueprint = Blueprint::from_dir("test_assets/example_blueprint").unwrap();
+
+        let output_dir = TempDir::new("my-project").unwrap();
+
+        let values: HashMap<_, _> = vec![("name", "my-project"), ("version", "1"), ("foobar", "stuff")]
+            .iter().cloned().collect();
+        
+        let mustache = Mustache::new();
+
+        blueprint.render(&mustache, &values, output_dir.path()).unwrap();
+
+        let test = fs::read_to_string(output_dir.path().join("dir/test.yaml")).unwrap();
+
+        assert!(test.find("name: my-project").is_some());
+        assert!(test.find("version: 1").is_some());
+    }
 }
