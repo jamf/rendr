@@ -22,7 +22,7 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
         None         => Ok(HashMap::new()),
     }?;
 
-    let blueprint = Blueprint::from_remote_repo(template)?;
+    let blueprint = Blueprint::from_repo_location(template)?;
 
     println!("{}", blueprint);
     println!(

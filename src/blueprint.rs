@@ -45,10 +45,10 @@ struct Value {
 }
 
 impl Blueprint {
-    pub fn from_remote_repo(url: &str) -> Result<Blueprint, DynError> {
+    pub fn from_repo_location(path: &str) -> Result<Blueprint, DynError> {
         let dir = TempDir::new("checked_out_blueprint")?;
 
-        Repository::clone(url, &dir)?;
+        Repository::clone(path, &dir)?;
 
         let meta_raw = fs::read_to_string(dir.path().join("metadata.yaml"))?;
 
@@ -105,7 +105,7 @@ mod tests {
     
     #[test]
     fn parse_example_blueprint_metadata() {
-        let blueprint = Blueprint::from_remote_repo("test_assets/example_blueprint").unwrap();
+        let blueprint = Blueprint::from_repo_location("test_assets/example_blueprint").unwrap();
 
         assert_eq!(blueprint.metadata.name, "example-blueprint");
         assert_eq!(blueprint.metadata.version, 1);
@@ -115,7 +115,7 @@ mod tests {
 
     #[test]
     fn render_example_blueprint() {
-        let blueprint = Blueprint::from_remote_repo("test_assets/example_blueprint").unwrap();
+        let blueprint = Blueprint::from_repo_location("test_assets/example_blueprint").unwrap();
 
         let output_dir = TempDir::new("my-project").unwrap();
 
