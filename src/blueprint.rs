@@ -76,26 +76,49 @@ impl Blueprint {
             fs::create_dir(output_dir)?;
         }
 
+        self.render_rec(engine, values, &self.dir.path().join("blueprint"), output_dir)?;
+
+        Ok(())
+    }
+
+    pub fn render_rec<TE: TemplatingEngine>(
+            &self,
+            engine: &TE,
+            values: &HashMap<&str, &str>,
+            src_dir: &Path,
+            output_dir: &Path,
+    ) -> Result<(), DynError> {
         // Iterate through the blueprint templates and render them into our output
         // directory.  
-        if output_dir.is_dir() {
-            for entry in fs::read_dir(&self.dir.path().join("blueprint"))? {
-                let path = entry?.path();
 
-                if path.is_file() {
-                    println!("Found file {:?}", &path);
+        println!("render_rec: {:?} {:?}", src_dir, output_dir);
+        for entry in fs::read_dir(src_dir)? {
+            let path = entry?.path();
 
-                    let filename = path.file_name()
-                        .unwrap()
-                        .to_str()
-                        .expect("Invalid utf8 in filepath.");
+            if path.is_file() {
+                println!("Found file {:?}", &path);
 
-                    let contents = fs::read_to_string(&path)?;
+                let filename = path.file_name()
+                    .unwrap()
+                    .to_str()
+                    .expect("Invalid utf8 in filepath.");
 
-                    let contents = engine.render_template(&contents, &values)?;
+                let contents = fs::read_to_string(&path)?;
 
-                    fs::write(output_dir.join(filename), &contents)?;
+                let contents = engine.render_template(&contents, &values)?;
+
+                fs::write(output_dir.join(filename), &contents)?;
+            }
+            else if path.is_dir() {
+                let dirname = path.file_name()
+                    .unwrap()
+                    .to_str()
+                    .expect("Invalid utf8 in filepath.");
+                let output_dir = output_dir.join(dirname);
+                if !output_dir.is_dir() {
+                    fs::create_dir(&output_dir)?;
                 }
+                self.render_rec(engine, values, &path, &output_dir)?;
             }
         }
 
