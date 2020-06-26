@@ -94,4 +94,36 @@ impl Blueprint {
 
         Ok(())
     }
-} 
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use tempdir::TempDir;
+    use crate::blueprint::Blueprint;
+    use crate::templating::Mustache;
+    
+    #[test]
+    fn parse_example_blueprint_metadata() {
+        let blueprint = Blueprint::from_remote_repo("test_assets/example_blueprint").unwrap();
+
+        assert_eq!(blueprint.metadata.name, "example-blueprint");
+        assert_eq!(blueprint.metadata.version, 1);
+        assert_eq!(blueprint.metadata.author, "Brian S. <brian.steward@jamf.com>, Tomasz K. <tomasz.kurcz@jamf.com>");
+        assert_eq!(blueprint.metadata.about, "Just an example blueprint for `express`.");
+    }
+
+    #[test]
+    fn render_example_blueprint() {
+        let blueprint = Blueprint::from_remote_repo("test_assets/example_blueprint").unwrap();
+
+        let output_dir = TempDir::new("my-project").unwrap();
+
+        let values: HashMap<_, _> = vec![("name", "my-project"), ("version", "1"), ("foobar", "stuff")]
+            .iter().cloned().collect();
+        
+        let mustache = Mustache::new();
+
+        blueprint.render(&mustache, &values, output_dir.path()).unwrap();
+    }
+}

@@ -1,0 +1,3 @@
+[submodule "test_assets/example_blueprint"]
+	path = test_assets/example_blueprint
+	url = https://stash.jamf.build/scm/scaf/example-blueprint.git
