@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::collections::HashMap;
@@ -16,33 +17,23 @@ type DynError = Box<dyn Error>;
 
 pub struct Blueprint {
     metadata: BlueprintMetadata,
-    dir: TempDir,
+    dir: BlueprintDir,
 }
 
-impl Display for Blueprint {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        writeln!(f, "{} v{}", &self.metadata.name, &self.metadata.version)?;
-        writeln!(f, "{}", &self.metadata.author)?;
-        writeln!(f, "{}", &self.metadata.description)?;
-        
-        Ok(())
+enum BlueprintDir {
+    TempDir(TempDir),
+    Path(PathBuf),
+}
+
+impl BlueprintDir {
+    fn path(&self) -> &Path {
+        use BlueprintDir::*;
+
+        match self {
+            TempDir(tmpdir) => tmpdir.path(),
+            Path(path)      => &path,
+        }
     }
-}
-
-#[derive(Deserialize)]
-struct BlueprintMetadata {
-    name: String,
-    version: u32,
-    author: String,
-    description: String,
-    values: Vec<Value>,
-}
-
-#[derive(Deserialize)]
-struct Value {
-    name: String,
-    description: String,
-    default: Option<String>,
 }
 
 impl Blueprint {
@@ -57,7 +48,20 @@ impl Blueprint {
 
         Ok(Blueprint {
             metadata,
-            dir,
+            dir: BlueprintDir::TempDir(dir),
+        })
+    }
+
+    pub fn from_dir(path: &str) -> Result<Blueprint, DynError> {
+        let path = Path::new(path);
+
+        let meta_raw = fs::read_to_string(path.join("metadata.yaml"))?;
+
+        let metadata = serde_yaml::from_str(&meta_raw)?;
+
+        Ok(Blueprint {
+            metadata,
+            dir: BlueprintDir::Path(path.to_path_buf()),
         })
     }
 
@@ -97,6 +101,32 @@ impl Blueprint {
     }
 }
 
+impl Display for Blueprint {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        writeln!(f, "{} v{}", &self.metadata.name, &self.metadata.version)?;
+        writeln!(f, "{}", &self.metadata.author)?;
+        writeln!(f, "{}", &self.metadata.description)?;
+        
+        Ok(())
+    }
+}
+
+#[derive(Deserialize)]
+struct BlueprintMetadata {
+    name: String,
+    version: u32,
+    author: String,
+    description: String,
+    values: Vec<Value>,
+}
+
+#[derive(Deserialize)]
+struct Value {
+    name: String,
+    description: String,
+    default: Option<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -106,7 +136,7 @@ mod tests {
     
     #[test]
     fn parse_example_blueprint_metadata() {
-        let blueprint = Blueprint::from_repo_location("test_assets/example_blueprint").unwrap();
+        let blueprint = Blueprint::from_dir("test_assets/example_blueprint").unwrap();
 
         assert_eq!(blueprint.metadata.name, "example-blueprint");
         assert_eq!(blueprint.metadata.version, 1);
@@ -116,7 +146,7 @@ mod tests {
 
     #[test]
     fn render_example_blueprint() {
-        let blueprint = Blueprint::from_repo_location("test_assets/example_blueprint").unwrap();
+        let blueprint = Blueprint::from_dir("test_assets/example_blueprint").unwrap();
 
         let output_dir = TempDir::new("my-project").unwrap();
 

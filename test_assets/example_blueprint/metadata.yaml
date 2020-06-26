@@ -5,6 +5,8 @@ description: Just an example blueprint for `express`.
 values:
 - name: name
   description: The name of your project
+  required: true
 - name: version
   description: The version of your project
   default: 1
+  required: true
