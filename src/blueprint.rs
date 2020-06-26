@@ -71,8 +71,10 @@ impl Blueprint {
             values: &HashMap<&str, &str>,
             output_dir: &Path,
     ) -> Result<(), DynError> {
-        // Create our output directory.
-        fs::create_dir(output_dir)?;
+        // Create our output directory if it doesn't exist yet.
+        if !output_dir.is_dir() {
+            fs::create_dir(output_dir)?;
+        }
 
         // Iterate through the blueprint templates and render them into our output
         // directory.  
