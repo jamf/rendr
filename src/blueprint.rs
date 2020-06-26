@@ -23,7 +23,7 @@ impl Display for Blueprint {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         writeln!(f, "{} v{}", &self.metadata.name, &self.metadata.version)?;
         writeln!(f, "{}", &self.metadata.author)?;
-        writeln!(f, "{}", &self.metadata.about)?;
+        writeln!(f, "{}", &self.metadata.description)?;
         
         Ok(())
     }
@@ -34,13 +34,14 @@ struct BlueprintMetadata {
     name: String,
     version: u32,
     author: String,
-    about: String,
-    values: HashMap<String, Value>,
+    description: String,
+    values: Vec<Value>,
 }
 
 #[derive(Deserialize)]
 struct Value {
-    desc: String,
+    name: String,
+    description: String,
     default: Option<String>,
 }
 
@@ -110,7 +111,7 @@ mod tests {
         assert_eq!(blueprint.metadata.name, "example-blueprint");
         assert_eq!(blueprint.metadata.version, 1);
         assert_eq!(blueprint.metadata.author, "Brian S. <brian.stewart@jamf.com>, Tomasz K. <tomasz.kurcz@jamf.com>");
-        assert_eq!(blueprint.metadata.about, "Just an example blueprint for `express`.");
+        assert_eq!(blueprint.metadata.description, "Just an example blueprint for `express`.");
     }
 
     #[test]
