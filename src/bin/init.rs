@@ -1,11 +1,16 @@
 use std::error::Error;
 use std::collections::HashMap;
 use std::path::Path;
+use std::io;
+use std::io::prelude::*;
 
 use clap::ArgMatches;
+use serde::Deserialize;
+use text_io::read;
 
 use express::templating;
 use express::blueprint::Blueprint;
+use express::blueprint::ValueSpec;
 
 type DynError = Box<dyn Error>;
 
@@ -22,7 +27,7 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
         None         => Ok(HashMap::new()),
     }?;
 
-    let blueprint = Blueprint::from_repo(template)?;
+    let blueprint = Blueprint::new(template)?;
 
     println!("{}", blueprint);
     println!(
@@ -31,11 +36,29 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
             .expect("Invalid utf8 in output_dir. This panic shouldn't happen!"),
     );
 
+    // TODO: prompt for values not provided
+
     let mustache = templating::Mustache::new();
 
     blueprint.render(&mustache, &values, &output_dir)?;
 
     Ok(())
+}
+
+fn prompt_for_values(values: &HashMap<&str, &str>, blueprint: &Blueprint) {
+    for value in blueprint.values() {
+        match values.get::<str>(&value.name) {
+            Some(_) => (),
+            None => prompt_for_value(values, value)
+        }
+    }
+}
+
+fn prompt_for_value(values: &HashMap<&str, &str>, value: &ValueSpec) {
+    println!("[{}] {}: ", value.name, value.description);
+    let line: String = read!("{}\n");
+    let key = value.name;
+    values.insert(key, &line); // TODO: This isn't working
 }
 
 // Parse a string of "key:value" form into a tuple of (key, value).

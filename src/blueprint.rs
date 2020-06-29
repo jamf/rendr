@@ -21,21 +21,30 @@ pub struct Blueprint {
 }
 
 impl Blueprint {
-    pub fn from_repo(path: &str) -> Result<Blueprint, DynError> {
+
+    pub fn new(path: &str) -> Result<Blueprint, DynError> {
+        if Path::new(path).exists() {
+            return Self::from_dir(path);
+        }
+
+        Self::from_repo(path)
+    }
+
+    fn from_repo(path: &str) -> Result<Blueprint, DynError> {
         let dir = TempDir::new("checked_out_blueprint")?;
 
         Repository::clone(path, &dir)?;
 
-        Self::new(BlueprintDir::TempDir(dir))
+        Self::from_blueprint_dir(BlueprintDir::TempDir(dir))
     }
 
-    pub fn from_dir(path: &str) -> Result<Blueprint, DynError> {
+    fn from_dir(path: &str) -> Result<Blueprint, DynError> {
         let path = Path::new(path).to_path_buf();
 
-        Self::new(BlueprintDir::Path(path))
+        Self::from_blueprint_dir(BlueprintDir::Path(path))
     }
 
-    fn new(dir: BlueprintDir) -> Result<Blueprint, DynError> {
+    fn from_blueprint_dir(dir: BlueprintDir) -> Result<Blueprint, DynError> {
         let meta_raw = fs::read_to_string(dir.path().join("metadata.yaml"))?;
 
         let metadata = serde_yaml::from_str(&meta_raw)?;
@@ -44,6 +53,10 @@ impl Blueprint {
             metadata,
             dir,
         })
+    }
+
+    pub fn values(&self) -> &Vec<ValueSpec> {
+        &self.metadata.values
     }
 
     pub fn render<TE: TemplatingEngine>(
@@ -139,15 +152,25 @@ struct BlueprintMetadata {
     version: u32,
     author: String,
     description: String,
-    values: Vec<Value>,
+    values: Vec<ValueSpec>,
 }
 
 #[derive(Deserialize)]
-struct Value {
-    name: String,
-    description: String,
+pub struct ValueSpec {
+    pub name: String,
+    pub description: String,
     default: Option<String>,
+    #[serde(default)]
+    required: bool,
 }
+
+impl PartialEq for ValueSpec {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
+}
+
+impl Eq for ValueSpec {}
 
 #[cfg(test)]
 mod tests {
@@ -159,7 +182,7 @@ mod tests {
     
     #[test]
     fn parse_example_blueprint_metadata() {
-        let blueprint = Blueprint::from_dir("test_assets/example_blueprint").unwrap();
+        let blueprint = Blueprint::new("test_assets/example_blueprint").unwrap();
 
         assert_eq!(blueprint.metadata.name, "example-blueprint");
         assert_eq!(blueprint.metadata.version, 1);
@@ -169,7 +192,7 @@ mod tests {
 
     #[test]
     fn render_example_blueprint() {
-        let blueprint = Blueprint::from_dir("test_assets/example_blueprint").unwrap();
+        let blueprint = Blueprint::new("test_assets/example_blueprint").unwrap();
 
         let output_dir = TempDir::new("my-project").unwrap();
 
@@ -191,7 +214,7 @@ mod tests {
 
     #[test]
     fn render_example_blueprint_recursive() {
-        let blueprint = Blueprint::from_dir("test_assets/example_blueprint").unwrap();
+        let blueprint = Blueprint::new("test_assets/example_blueprint").unwrap();
 
         let output_dir = TempDir::new("my-project").unwrap();
 
