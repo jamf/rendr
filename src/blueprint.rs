@@ -20,48 +20,29 @@ pub struct Blueprint {
     dir: BlueprintDir,
 }
 
-enum BlueprintDir {
-    TempDir(TempDir),
-    Path(PathBuf),
-}
-
-impl BlueprintDir {
-    fn path(&self) -> &Path {
-        use BlueprintDir::*;
-
-        match self {
-            TempDir(tmpdir) => tmpdir.path(),
-            Path(path)      => &path,
-        }
-    }
-}
-
 impl Blueprint {
-    pub fn from_repo_location(path: &str) -> Result<Blueprint, DynError> {
+    pub fn from_repo(path: &str) -> Result<Blueprint, DynError> {
         let dir = TempDir::new("checked_out_blueprint")?;
 
         Repository::clone(path, &dir)?;
 
+        Self::new(BlueprintDir::TempDir(dir))
+    }
+
+    pub fn from_dir(path: &str) -> Result<Blueprint, DynError> {
+        let path = Path::new(path).to_path_buf();
+
+        Self::new(BlueprintDir::Path(path))
+    }
+
+    fn new(dir: BlueprintDir) -> Result<Blueprint, DynError> {
         let meta_raw = fs::read_to_string(dir.path().join("metadata.yaml"))?;
 
         let metadata = serde_yaml::from_str(&meta_raw)?;
 
         Ok(Blueprint {
             metadata,
-            dir: BlueprintDir::TempDir(dir),
-        })
-    }
-
-    pub fn from_dir(path: &str) -> Result<Blueprint, DynError> {
-        let path = Path::new(path);
-
-        let meta_raw = fs::read_to_string(path.join("metadata.yaml"))?;
-
-        let metadata = serde_yaml::from_str(&meta_raw)?;
-
-        Ok(Blueprint {
-            metadata,
-            dir: BlueprintDir::Path(path.to_path_buf()),
+            dir,
         })
     }
 
@@ -123,6 +104,22 @@ impl Blueprint {
         }
 
         Ok(())
+    }
+}
+
+enum BlueprintDir {
+    TempDir(TempDir),
+    Path(PathBuf),
+}
+
+impl BlueprintDir {
+    fn path(&self) -> &Path {
+        use BlueprintDir::*;
+
+        match self {
+            TempDir(tmpdir) => tmpdir.path(),
+            Path(path)      => &path,
+        }
     }
 }
 
