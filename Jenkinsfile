@@ -1,5 +1,7 @@
 @Library(['tools', "client-apps"]) _
 
+def macAgent = anka 'macos.10.15-build'
+
 pipeline {
     agent {
         kubernetes {
@@ -42,7 +44,7 @@ pipeline {
                 }
 
                 stage('macOS build') {
-                    agent { label "${anka 'macos.10.15-build'}" }
+                    agent { label macAgent }
 
                     steps {
                         sh 'brew install rust'
