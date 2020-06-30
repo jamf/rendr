@@ -33,6 +33,8 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
             .expect("Invalid utf8 in output_dir. This panic shouldn't happen!"),
     );
 
+    check_defaults(&mut values, &blueprint);
+
     prompt_for_values(&mut values, &blueprint);
 
     let mustache = templating::Mustache::new();
@@ -40,6 +42,17 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
     blueprint.render(&mustache, &values, &output_dir)?;
 
     Ok(())
+}
+
+fn check_defaults(values: &mut HashMap<String, String>, blueprint: &Blueprint) {
+    for value in blueprint.values() {
+        if let None = values.get::<str>(&value.name) {
+            if let Some(default) = &value.default {
+                let key = value.name.clone();
+                values.insert(key, default.clone());
+            }
+        }
+    }
 }
 
 fn prompt_for_values(values: &mut HashMap<String, String>, blueprint: &Blueprint) {
@@ -53,7 +66,7 @@ fn prompt_for_values(values: &mut HashMap<String, String>, blueprint: &Blueprint
 }
 
 fn prompt_for_value(values: &mut HashMap<String, String>, value: &ValueSpec) {
-    println!("[{}] {}: ", value.name, value.description);
+    print!("{}: ", value.description);
     let line: String = read!("{}\n");
     let key = value.name.clone();
     values.insert(key, line);

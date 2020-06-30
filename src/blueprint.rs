@@ -158,7 +158,7 @@ struct BlueprintMetadata {
 pub struct ValueSpec {
     pub name: String,
     pub description: String,
-    default: Option<String>,
+    pub default: Option<String>,
     #[serde(default)]
     pub required: bool,
 }
