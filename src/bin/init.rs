@@ -11,6 +11,7 @@ use text_io::read;
 use express::templating;
 use express::blueprint::Blueprint;
 use express::blueprint::ValueSpec;
+use express::utilities::parse_value;
 
 type DynError = Box<dyn Error>;
 
@@ -59,17 +60,6 @@ fn prompt_for_value(values: &HashMap<&str, &str>, value: &ValueSpec) {
     let line: String = read!("{}\n");
     let key = value.name;
     values.insert(key, &line); // TODO: This isn't working
-}
-
-// Parse a string of "key:value" form into a tuple of (key, value).
-fn parse_value(s: &str) -> Result<(&str, &str), String> {
-    let pos = s.find(":")
-        .ok_or(format!("Invalid value `{}`", s))?;
-
-    let mut result = s.split_at(pos);
-    result.1 = &result.1[1..];
-
-    Ok(result)
 }
 
 #[test]
