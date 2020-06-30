@@ -59,7 +59,7 @@ pipeline {
             when { buildingTag() }
 
             environment {
-                // TODO: GITHUB_TOKEN = credentials '...'
+                GITHUB_TOKEN = '' // TODO credentials '...'
             }
 
             steps {
