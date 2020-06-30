@@ -44,9 +44,10 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
 
 fn prompt_for_values(values: &mut HashMap<String, String>, blueprint: &Blueprint) {
     for value in blueprint.values() {
-        match values.get::<str>(&value.name) {
-            Some(_) => (),
-            None => prompt_for_value(values, value)
+        if let None = values.get::<str>(&value.name) {
+            if value.required {
+                prompt_for_value(values, value);
+            }
         }
     }
 }

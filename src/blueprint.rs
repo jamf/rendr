@@ -160,7 +160,7 @@ pub struct ValueSpec {
     pub description: String,
     default: Option<String>,
     #[serde(default)]
-    required: bool,
+    pub required: bool,
 }
 
 impl PartialEq for ValueSpec {

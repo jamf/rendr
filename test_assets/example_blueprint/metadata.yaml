@@ -10,3 +10,6 @@ values:
   description: The version of your project
   default: 1
   required: true
+- name: extra_info
+  description: This isn't really needed
+  default: 1
