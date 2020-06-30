@@ -1,6 +1,6 @@
 
 // Parse a string of "key:value" form into a tuple of (key, value).
-fn parse_value(s: &str) -> Result<(&str, &str), String> {
+pub fn parse_value(s: &str) -> Result<(&str, &str), String> {
     let pos = s.find(":")
         .ok_or(format!("Invalid value `{}`", s))?;
 

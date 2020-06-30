@@ -1,17 +1,13 @@
 use std::error::Error;
 use std::collections::HashMap;
 use std::path::Path;
-use std::io;
-use std::io::prelude::*;
 
 use clap::ArgMatches;
-use serde::Deserialize;
 use text_io::read;
 
 use express::templating;
 use express::blueprint::Blueprint;
 use express::blueprint::ValueSpec;
-use express::utilities::parse_value;
 
 type DynError = Box<dyn Error>;
 
@@ -23,7 +19,7 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
 
     let values = matches.values_of("value");
 
-    let values: HashMap<&str, &str> = match values {
+    let mut values: HashMap<String, String> = match values {
         Some(values) => values.map(parse_value).collect(),
         None         => Ok(HashMap::new()),
     }?;
@@ -37,7 +33,7 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
             .expect("Invalid utf8 in output_dir. This panic shouldn't happen!"),
     );
 
-    // TODO: prompt for values not provided
+    prompt_for_values(&mut values, &blueprint);
 
     let mustache = templating::Mustache::new();
 
@@ -46,7 +42,7 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
     Ok(())
 }
 
-fn prompt_for_values(values: &HashMap<&str, &str>, blueprint: &Blueprint) {
+fn prompt_for_values(values: &mut HashMap<String, String>, blueprint: &Blueprint) {
     for value in blueprint.values() {
         match values.get::<str>(&value.name) {
             Some(_) => (),
@@ -55,11 +51,21 @@ fn prompt_for_values(values: &HashMap<&str, &str>, blueprint: &Blueprint) {
     }
 }
 
-fn prompt_for_value(values: &HashMap<&str, &str>, value: &ValueSpec) {
+fn prompt_for_value(values: &mut HashMap<String, String>, value: &ValueSpec) {
     println!("[{}] {}: ", value.name, value.description);
     let line: String = read!("{}\n");
-    let key = value.name;
-    values.insert(key, &line); // TODO: This isn't working
+    let key = value.name.clone();
+    values.insert(key, line);
+}
+
+fn parse_value(s: &str) -> Result<(String, String), String> {
+    let pos = s.find(":")
+        .ok_or(format!("Invalid value `{}`", s))?;
+
+    let mut result = s.split_at(pos);
+    result.1 = &result.1[1..];
+
+    Ok((result.0.to_string(), result.1.to_string()))
 }
 
 #[test]

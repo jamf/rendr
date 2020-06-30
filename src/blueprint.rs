@@ -21,7 +21,6 @@ pub struct Blueprint {
 }
 
 impl Blueprint {
-
     pub fn new(path: &str) -> Result<Blueprint, DynError> {
         if Path::new(path).exists() {
             return Self::from_dir(path);
@@ -62,7 +61,7 @@ impl Blueprint {
     pub fn render<TE: TemplatingEngine>(
             &self,
             engine: &TE,
-            values: &HashMap<&str, &str>,
+            values: &HashMap<String, String>,
             output_dir: &Path,
     ) -> Result<(), DynError> {
         // Create our output directory if it doesn't exist yet.
@@ -78,7 +77,7 @@ impl Blueprint {
     pub fn render_rec<TE: TemplatingEngine>(
             &self,
             engine: &TE,
-            values: &HashMap<&str, &str>,
+            values: &HashMap<String, String>,
             src_dir: &Path,
             output_dir: &Path,
     ) -> Result<(), DynError> {
@@ -196,7 +195,7 @@ mod tests {
 
         let output_dir = TempDir::new("my-project").unwrap();
 
-        let values: HashMap<_, _> = vec![("name", "my-project"), ("version", "1"), ("foobar", "stuff")]
+        let values: HashMap<_, _> = vec![("name".to_string(), "my-project".to_string()), ("version".to_string(), "1".to_string()), ("foobar".to_string(), "stuff".to_string())]
             .iter().cloned().collect();
         
         let mustache = Mustache::new();
@@ -218,7 +217,7 @@ mod tests {
 
         let output_dir = TempDir::new("my-project").unwrap();
 
-        let values: HashMap<_, _> = vec![("name", "my-project"), ("version", "1"), ("foobar", "stuff")]
+        let values: HashMap<_, _> = vec![("name".to_string(), "my-project".to_string()), ("version".to_string(), "1".to_string()), ("foobar".to_string(), "stuff".to_string())]
             .iter().cloned().collect();
         
         let mustache = Mustache::new();
