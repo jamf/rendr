@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::collections::HashMap;
 use std::path::Path;
+use std::io::{self, Write};
 
 use clap::ArgMatches;
 use text_io::read;
@@ -67,6 +68,7 @@ fn prompt_for_values(values: &mut HashMap<String, String>, blueprint: &Blueprint
 
 fn prompt_for_value(values: &mut HashMap<String, String>, value: &ValueSpec) {
     print!("{}: ", value.description);
+    io::stdout().flush();
     let line: String = read!("{}\n");
     let key = value.name.clone();
     values.insert(key, line);
