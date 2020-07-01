@@ -1,22 +1,5 @@
 @Library(['tools', "client-apps"]) _
 
-def rustPod = '''
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-  - name: rust
-    image: docker.jamf.build/rust:1.44.0
-    tty: true
-    command:
-    - cat
-  - name: github
-    image: docker.jamf.build/ci/hub:2.14.2
-    tty: true
-    command:
-    - cat
-'''
-
 pipeline {
     agent none
 
@@ -27,11 +10,13 @@ pipeline {
 
     stages {
         stage ('Run tests') {
+            when { expression { false } }
+
             agent {
                 kubernetes {
                     label 'rust'
                     defaultContainer 'rust'
-                    yaml rustPod
+                    yamlFile 'rust-pod.yaml'
                 }
             }
 
@@ -43,11 +28,13 @@ pipeline {
         stage('Build') {
             parallel {
                 stage('Linux build') {
+                    when { expression { false } }
+
                     agent {
                         kubernetes {
                             label 'rust'
                             defaultContainer 'rust'
-                            yaml rustPod
+                            yamlFile 'rust-pod.yaml'
                         }
                     }
 
@@ -60,6 +47,8 @@ pipeline {
                 }
 
                 stage('macOS build') {
+                    when { expression { false } }
+
                     agent { label "${anka 'macos.10.15-build'}" }
 
                     steps {
@@ -85,7 +74,7 @@ pipeline {
                 kubernetes {
                     label 'rust'
                     defaultContainer 'github'
-                    yaml rustPod
+                    yamlFile 'rust-pod.yaml'
                 }
             }
 
@@ -97,8 +86,9 @@ pipeline {
             }
 
             steps {
-                unstash 'mac-cli'
-                unstash 'linux-cli'
+                // unstash 'mac-cli'
+                // unstash 'linux-cli'
+                sh 'touch express-darwin express-linux'
                 sh "hub release create $VERSION -m $VERSION -t master -a express-darwin -a express-linux"
             }
         }
