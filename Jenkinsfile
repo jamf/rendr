@@ -81,7 +81,7 @@ pipeline {
             environment {
                 TAG_NAME = "0.1.0-alpha-${env.BUILD_NUMBER}"
                 GITHUB_USER = 'jamfdevops'
-                GITHUB_TOKEN = 'github-token'
+                GITHUB_TOKEN = credentials 'github-token'
                 HUB_VERBOSE = '1'
                 VERSION = "${params.RELEASE ? params.VERSION : env.TAG_NAME}"
             }
