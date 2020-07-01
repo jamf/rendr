@@ -22,6 +22,14 @@ pipeline {
 
     stages {
         stage ('Run tests') {
+            agent {
+                kubernetes {
+                    label 'rust'
+                    defaultContainer 'rust'
+                    yaml rustPod
+                }
+            }
+
             steps {
                 sh 'cargo test'
             }
