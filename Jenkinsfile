@@ -63,12 +63,12 @@ pipeline {
         }
 
         stage('Release') {
-            when {
-                anyOf {
-                    buildingTag()
-                    expression { params.RELEASE }
-                }
-            }
+            // when {
+            //     anyOf {
+            //         buildingTag()
+            //         expression { params.RELEASE }
+            //     }
+            // }
 
             agent {
                 kubernetes {
@@ -79,6 +79,7 @@ pipeline {
             }
 
             environment {
+                TAG_NAME = "0.1.0-alpha-${env.BUILD_NUMBER}"
                 GITHUB_USER = 'jamfdevops'
                 GITHUB_TOKEN = 'github-token'
                 HUB_VERBOSE = '1'
