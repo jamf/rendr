@@ -18,13 +18,7 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
     let name = matches.value_of("name").unwrap();
     let output_dir = Path::new(matches.value_of("dir").unwrap_or(name));
 
-    let values = matches.values_of("value");
-
-    let mut values: HashMap<&str, &str> = match values {
-        Some(values) => values.map(parse_value).collect(),
-        None         => Ok(HashMap::new()),
-    }?;
-
+    // Attempt to read the provided blueprint.
     let blueprint = Blueprint::new(template)?;
 
     println!("{}", blueprint);
@@ -34,14 +28,28 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
             .expect("Invalid utf8 in output_dir. This panic shouldn't happen!"),
     );
 
-    check_defaults(&mut values, &blueprint);
+    // Time to parse values. Let's start by collecting the defaults.
+    let mut values: HashMap<&str, &str> = blueprint.default_values()
+                                                   .collect();
 
-    let prompt_values = prompt_for_values(&mut values, &blueprint);
-    let prompt_hash: HashMap<&str, &str> = prompt_values.iter()
+    // If some values were provided via CLI arguments, merge those in.
+    if let Some(cli_values) = matches.values_of("value") {
+        let cli_values: Result<Vec<_>, _> = cli_values.map(parse_value).collect();
+        values.extend(cli_values?);
+    }
+
+    // Figure out which required values are still missing.
+    let missing_values = blueprint.required_values()
+        .filter(|v| values.get::<str>(&v.name).is_none());
+
+    // Prompt for the missing values and collect them.
+    let prompt_values_owned: Vec<_> = prompt_for_values(missing_values).collect();
+
+    // Merge the values from prompts in.
+    let prompt_values: Vec<_> = prompt_values_owned.iter()
         .map(|(k, v)| (*k, v.as_str()))
         .collect();
-
-    values.extend(prompt_hash);
+    values.extend(prompt_values);
 
     let mustache = templating::Mustache::new();
 
@@ -50,27 +58,13 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
     Ok(())
 }
 
-fn check_defaults<'s>(values: &mut HashMap<&'s str, &'s str>, blueprint: &'s Blueprint) {
-    for value in blueprint.values() {
-        if let None = values.get::<str>(&value.name) {
-            if let Some(default) = &value.default {
-                let key = &value.name;
-                values.insert(key, default);
-            }
-        }
-    }
+type ValueFromPrompt<'s> = (&'s str, String);
+
+fn prompt_for_values<'s>(values: impl Iterator<Item = &'s ValueSpec>) -> impl Iterator<Item = ValueFromPrompt<'s>> {
+    values.map(prompt_for_value)
 }
 
-fn prompt_for_values<'s>(values: &HashMap<&'s str, &str>, blueprint: &'s Blueprint) -> Vec<(&'s str, String)> {
-    blueprint.values()
-        .iter()
-        .filter(|v| values.get::<str>(&v.name).is_none())   // only take values that aren't yet in `values`
-        .filter(|v| v.required)                             // only take required values
-        .map(prompt_for_value)
-        .collect()
-}
-
-fn prompt_for_value(value: &ValueSpec) -> (&str, String) {
+fn prompt_for_value(value: &ValueSpec) -> ValueFromPrompt<'_> {
     print!("{}: ", value.description);
     io::stdout().flush().unwrap();
     (&value.name, read!("{}\n"))

@@ -54,8 +54,19 @@ impl Blueprint {
         })
     }
 
-    pub fn values(&self) -> &Vec<ValueSpec> {
-        &self.metadata.values
+    pub fn values(&self) -> impl Iterator<Item=&ValueSpec> {
+        self.metadata.values.iter()
+    }
+
+    pub fn default_values(&self) -> impl Iterator<Item=(&str, &str)> {
+        self.values()
+            .filter(|v| v.default.is_some())
+            .map(|v| (v.name.as_str(), v.default.as_ref().unwrap().as_str()))
+    }
+
+    pub fn required_values(&self) -> impl Iterator<Item=&ValueSpec> {
+        self.values()
+            .filter(|v| v.required)
     }
 
     pub fn render<TE: TemplatingEngine>(
