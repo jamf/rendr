@@ -14,7 +14,7 @@ pub trait TemplatingEngine {
     fn render_template(
         &self,
         template: &str,
-        values: &HashMap<String, String>,
+        values: &HashMap<&str, &str>,
     ) -> Result<String, RenderError>;
 }
 

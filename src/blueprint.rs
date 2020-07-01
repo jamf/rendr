@@ -61,7 +61,7 @@ impl Blueprint {
     pub fn render<TE: TemplatingEngine>(
             &self,
             engine: &TE,
-            values: &HashMap<String, String>,
+            values: &HashMap<&str, &str>,
             output_dir: &Path,
     ) -> Result<(), DynError> {
         // Create our output directory if it doesn't exist yet.
@@ -77,7 +77,7 @@ impl Blueprint {
     pub fn render_rec<TE: TemplatingEngine>(
             &self,
             engine: &TE,
-            values: &HashMap<String, String>,
+            values: &HashMap<&str, &str>,
             src_dir: &Path,
             output_dir: &Path,
     ) -> Result<(), DynError> {
@@ -195,7 +195,7 @@ mod tests {
 
         let output_dir = TempDir::new("my-project").unwrap();
 
-        let values: HashMap<_, _> = vec![("name".to_string(), "my-project".to_string()), ("version".to_string(), "1".to_string()), ("foobar".to_string(), "stuff".to_string())]
+        let values: HashMap<_, _> = vec![("name", "my-project"), ("version", "1"), ("foobar", "stuff")]
             .iter().cloned().collect();
         
         let mustache = Mustache::new();
@@ -217,7 +217,7 @@ mod tests {
 
         let output_dir = TempDir::new("my-project").unwrap();
 
-        let values: HashMap<_, _> = vec![("name".to_string(), "my-project".to_string()), ("version".to_string(), "1".to_string()), ("foobar".to_string(), "stuff".to_string())]
+        let values: HashMap<_, _> = vec![("name", "my-project"), ("version", "1"), ("foobar", "stuff")]
             .iter().cloned().collect();
         
         let mustache = Mustache::new();

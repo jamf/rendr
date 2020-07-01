@@ -20,7 +20,7 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
 
     let values = matches.values_of("value");
 
-    let mut values: HashMap<String, String> = match values {
+    let mut values: HashMap<&str, &str> = match values {
         Some(values) => values.map(parse_value).collect(),
         None         => Ok(HashMap::new()),
     }?;
@@ -36,7 +36,12 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
 
     check_defaults(&mut values, &blueprint);
 
-    prompt_for_values(&mut values, &blueprint);
+    let prompt_values = prompt_for_values(&mut values, &blueprint);
+    let prompt_hash: HashMap<&str, &str> = prompt_values.iter()
+        .map(|(k, v)| (*k, v.as_str()))
+        .collect();
+
+    values.extend(prompt_hash);
 
     let mustache = templating::Mustache::new();
 
@@ -45,43 +50,40 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
     Ok(())
 }
 
-fn check_defaults(values: &mut HashMap<String, String>, blueprint: &Blueprint) {
+fn check_defaults<'s>(values: &mut HashMap<&'s str, &'s str>, blueprint: &'s Blueprint) {
     for value in blueprint.values() {
         if let None = values.get::<str>(&value.name) {
             if let Some(default) = &value.default {
-                let key = value.name.clone();
-                values.insert(key, default.clone());
+                let key = &value.name;
+                values.insert(key, default);
             }
         }
     }
 }
 
-fn prompt_for_values(values: &mut HashMap<String, String>, blueprint: &Blueprint) {
-    for value in blueprint.values() {
-        if let None = values.get::<str>(&value.name) {
-            if value.required {
-                prompt_for_value(values, value);
-            }
-        }
-    }
+fn prompt_for_values<'s>(values: &HashMap<&'s str, &str>, blueprint: &'s Blueprint) -> Vec<(&'s str, String)> {
+    blueprint.values()
+        .iter()
+        .filter(|v| values.get::<str>(&v.name).is_none())   // only take values that aren't yet in `values`
+        .filter(|v| v.required)                             // only take required values
+        .map(prompt_for_value)
+        .collect()
 }
 
-fn prompt_for_value(values: &mut HashMap<String, String>, value: &ValueSpec) {
+fn prompt_for_value(value: &ValueSpec) -> (&str, String) {
     print!("{}: ", value.description);
-    io::stdout().flush();
-    let line: String = read!("{}\n");
-    let key = value.name.clone();
-    values.insert(key, line);
+    io::stdout().flush().unwrap();
+    (&value.name, read!("{}\n"))
 }
 
-fn parse_value(s: &str) -> Result<(String, String), String> {
+fn parse_value(s: &str) -> Result<(&str, &str), String> {
     let pos = s.find(":")
         .ok_or(format!("Invalid value `{}`", s))?;
 
     let mut result = s.split_at(pos);
     result.1 = &result.1[1..];
 
-    Ok((result.0.to_string(), result.1.to_string()))
+    Ok((result.0, result.1))
 }
 
 #[test]
