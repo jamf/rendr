@@ -97,7 +97,7 @@ pipeline {
             steps {
                 unstash 'mac-cli'
                 unstash 'linux-cli'
-                sh "hub release create $VERSION -t master -a express-darwin -a express-linux"
+                sh "hub release create $VERSION -m $VERSION -t master -a express-darwin -a express-linux"
             }
         }
     }
