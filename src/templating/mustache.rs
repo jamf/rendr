@@ -31,7 +31,10 @@ impl From<mustache::Error> for RenderError {
 fn render_valid_template() {
     let template = "name: {{ name }}, value: {{ value }}";
 
-    let values: HashMap<_, _> = [("name", "foo"), ("value", "bar"), ("asd", "dsa")]
+    let values: HashMap<_, _> = [
+        ("name", "foo"),
+        ("value", "bar"),
+        ("asd", "dsa")]
         .iter().cloned().collect();
 
     assert_eq!(

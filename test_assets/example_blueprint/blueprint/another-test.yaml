@@ -1,0 +1,4 @@
+project:
+  name: hardcoded-name
+  version: {{ version }}
+  stuff: {{ foobar }}

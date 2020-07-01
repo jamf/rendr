@@ -1,77 +1,89 @@
 use std::error::Error;
 use std::collections::HashMap;
-use std::fs;
 use std::path::Path;
+use std::io::{self, Write};
 
 use clap::ArgMatches;
-use git2::Repository;
-use tempdir::TempDir;
+use text_io::read;
 
-use express::templating::{self, TemplatingEngine};
+use express::templating;
+use express::blueprint::Blueprint;
+use express::blueprint::ValueSpec;
 
 type DynError = Box<dyn Error>;
 
-pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
+pub fn init(args: &ArgMatches) -> Result<(), DynError> {
     // Parse CLI arguments.
-    let template = matches.value_of("template").unwrap();
-    let name = matches.value_of("name").unwrap();
-    let output_dir = Path::new(matches.value_of("dir").unwrap_or(name));
+    let template = args.value_of("template").unwrap();
+    let name = args.value_of("name").unwrap();
+    let output_dir = Path::new(args.value_of("dir").unwrap_or(name));
 
-    let values = matches.values_of("value");
+    // Attempt to read the provided blueprint.
+    let blueprint = Blueprint::new(template)?;
 
-    let values: HashMap<&str, &str> = match values {
-        Some(values) => values.map(parse_value).collect(),
-        None         => Ok(HashMap::new()),
-    }?;
-
+    println!("{}", blueprint);
     println!(
-        "Generating project {} from template {}. Directory: {}",
-        name,
-        template,
+        "Output directory: {}",
         output_dir.to_str()
             .expect("Invalid utf8 in output_dir. This panic shouldn't happen!"),
     );
 
-    // Check out the blueprint into a new temporary directory.
-    let blueprint_dir = TempDir::new("checked_out_blueprint")?;
+    // Time to parse values. Let's start by collecting the defaults.
+    let mut values: HashMap<&str, &str> = blueprint.default_values()
+                                                   .collect();
 
-    Repository::clone(template, &blueprint_dir)?;
-
-    // Create our output directory.
-    fs::create_dir(output_dir)?;
-
-    // Iterate through the blueprint templates and render them into our output
-    // directory.  
-    if output_dir.is_dir() {
-        for entry in fs::read_dir(&blueprint_dir.path().join("blueprint"))? {
-            let path = entry?.path();
-
-            if path.is_file() {
-                println!("Found file {:?}", &path);
-
-                let filename = path.file_name()
-                    .unwrap()
-                    .to_str()
-                    .expect("Invalid utf8 in filepath.");
-
-                let contents = fs::read_to_string(&path)?;
-
-                let templating_engine = templating::Mustache::new();
-
-                let contents = templating_engine.render_template(&contents, &values)?;
-
-                fs::write(output_dir.join(filename), &contents)?;
-            }
-        }
+    // If some values were provided via CLI arguments, merge those in.
+    if let Some(cli_values) = args.values_of("value") {
+        let cli_values: Result<Vec<_>, _> = cli_values.map(parse_value).collect();
+        values.extend(cli_values?);
     }
+
+    // Figure out which required values are still missing.
+    let missing_values = blueprint.required_values()
+        .filter(|v| values.get::<str>(&v.name).is_none());
+
+    // Prompt for the missing values and collect them.
+    let prompt_values_owned: Vec<_> = prompt_for_values(missing_values).collect();
+
+    // Merge the values from prompts in.
+    let prompt_values: Vec<_> = prompt_values_owned.iter()
+        .map(|(k, v)| (*k, v.as_str()))
+        .collect();
+    values.extend(prompt_values);
+
+    let mustache = templating::Mustache::new();
+
+    blueprint.render(&mustache, &values, &output_dir)?;
 
     Ok(())
 }
 
-// Parse a string of "key:value" form into a tuple of (key, value).
+type ValueFromPrompt<'s> = (&'s str, String);
+
+fn prompt_for_values<'s>(values: impl Iterator<Item = &'s ValueSpec>) -> impl Iterator<Item = ValueFromPrompt<'s>> {
+    values.map(prompt_for_value)
+}
+
+fn prompt_for_value(value: &ValueSpec) -> ValueFromPrompt<'_> {
+    print!("{}: ", value.description);
+    io::stdout().flush().unwrap();
+    (&value.name, read!("{}\n"))
+}
+
 fn parse_value(s: &str) -> Result<(&str, &str), String> {
     let pos = s.find(":")
         .ok_or(format!("Invalid value `{}`", s))?;
 
-    Ok(s.split_at(pos))
+    let mut result = s.split_at(pos);
+    result.1 = &result.1[1..];
+
+    Ok((result.0, result.1))
+}
+
+#[test]
+fn correct_values_are_parsed_correctly() {
+    let (foo, bar) = parse_value("foo:bar").unwrap();
+
+    assert_eq!(foo, "foo");
+    assert_eq!(bar, "bar");
 }
