@@ -1,30 +1,24 @@
 @Library(['tools', "client-apps"]) _
 
 def rustPod = '''
-        apiVersion: v1
-        kind: Pod
-        spec:
-          containers:
-          - name: rust
-            image: docker.jamf.build/rust:1.44.0
-            tty: true
-            command:
-            - cat
-          - name: github
-            image: docker.jamf.build/ci/hub:2.14.2
-            tty: true
-            command:
-            - cat
-        '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: rust
+    image: docker.jamf.build/rust:1.44.0
+    tty: true
+    command:
+    - cat
+  - name: github
+    image: docker.jamf.build/ci/hub:2.14.2
+    tty: true
+    command:
+    - cat
+'''
 
 pipeline {
-    agent {
-        kubernetes {
-            label 'rust'
-            defaultContainer 'rust'
-            yaml rustPod
-        }
-    }
+    agent none
 
     stages {
         stage ('Run tests') {
