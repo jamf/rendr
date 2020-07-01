@@ -20,6 +20,11 @@ spec:
 pipeline {
     agent none
 
+    parameters {
+        booleanParam(name: 'RELEASE', defaultValue: false, description: 'Publish artifacts to GitHub Releases')
+        string(name: 'VERSION', defaultValue: '', description: 'Release versioo')
+    }
+
     stages {
         stage ('Run tests') {
             agent {
@@ -50,6 +55,7 @@ pipeline {
                         sh 'cargo build --release'
                         sh 'mv target/release/express express-linux'
                         archiveArtifacts 'express-linux'
+                        stash name: 'linux-cli', includes: 'express-linux'
                     }
                 }
 
@@ -68,7 +74,12 @@ pipeline {
         }
 
         stage('Release') {
-            when { buildingTag() }
+            when {
+                anyOf {
+                    buildingTag()
+                    expression { params.RELEASE }
+                }
+            }
 
             agent {
                 kubernetes {
@@ -80,11 +91,13 @@ pipeline {
 
             environment {
                 GITHUB_TOKEN = '' // TODO credentials '...'
+                VERSION = "${params.RELEASE ? params.VERSION : env.TAG_NAME}"
             }
 
             steps {
                 unstash 'mac-cli'
-                sh "hub release create $TAG_NAME -t master -a express-darwin -a express-linux"
+                unstash 'linux-cli'
+                sh "hub release create $VERSION -t master -a express-darwin -a express-linux"
             }
         }
     }
