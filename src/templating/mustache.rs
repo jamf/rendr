@@ -12,7 +12,7 @@ impl Mustache {
 }
 
 impl TemplatingEngine for Mustache {
-    fn render_template(&self, template: &str, values: &HashMap<String, String>) -> Result<String, RenderError> {
+    fn render_template(&self, template: &str, values: &HashMap<&str, &str>) -> Result<String, RenderError> {
         let template = mustache::compile_str(template)?;
 
         Ok(template.render_to_string(&values)?)
@@ -32,9 +32,9 @@ fn render_valid_template() {
     let template = "name: {{ name }}, value: {{ value }}";
 
     let values: HashMap<_, _> = [
-        ("name".to_string(), "foo".to_string()),
-        ("value".to_string(), "bar".to_string()),
-        ("asd".to_string(), "dsa".to_string())]
+        ("name", "foo"),
+        ("value", "bar"),
+        ("asd", "dsa")]
         .iter().cloned().collect();
 
     assert_eq!(
