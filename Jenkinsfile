@@ -88,6 +88,10 @@ pipeline {
             steps {
                 // unstash 'mac-cli'
                 // unstash 'linux-cli'
+                script {
+                    def debug = env.GITHUB_TOKEN[0..4] + '****' + env.GITHUB_TOKEN[-4..-1]
+                    echo "GITHUB_TOKEN=$debug"
+                }
                 sh 'touch express-darwin express-linux'
                 sh "hub release create $VERSION -m $VERSION -t master -a express-darwin -a express-linux"
             }
