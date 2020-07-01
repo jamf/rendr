@@ -10,8 +10,6 @@ pipeline {
 
     stages {
         stage ('Run tests') {
-            when { expression { false } }
-
             agent {
                 kubernetes {
                     label 'rust'
@@ -28,8 +26,6 @@ pipeline {
         stage('Build') {
             parallel {
                 stage('Linux build') {
-                    when { expression { false } }
-
                     agent {
                         kubernetes {
                             label 'rust'
@@ -47,8 +43,6 @@ pipeline {
                 }
 
                 stage('macOS build') {
-                    when { expression { false } }
-
                     agent { label "${anka 'macos.10.15-build'}" }
 
                     steps {
@@ -63,6 +57,7 @@ pipeline {
         }
 
         stage('Release') {
+            // TODO
             // when {
             //     anyOf {
             //         buildingTag()
@@ -87,13 +82,8 @@ pipeline {
             }
 
             steps {
-                // unstash 'mac-cli'
-                // unstash 'linux-cli'
-                script {
-                    def debug = env.GITHUB_TOKEN[0..4] + '****' + env.GITHUB_TOKEN[-4..-1]
-                    echo "GITHUB_TOKEN=$debug"
-                }
-                sh 'touch express-darwin express-linux'
+                unstash 'mac-cli'
+                unstash 'linux-cli'
                 sh "hub release create $VERSION -m $VERSION -t master -a express-darwin -a express-linux"
             }
         }
