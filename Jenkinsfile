@@ -22,7 +22,7 @@ pipeline {
 
     parameters {
         booleanParam(name: 'RELEASE', defaultValue: false, description: 'Publish artifacts to GitHub Releases')
-        string(name: 'VERSION', defaultValue: '', description: 'Release versioo')
+        string(name: 'VERSION', defaultValue: '', description: 'Release version')
     }
 
     stages {
