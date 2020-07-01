@@ -12,11 +12,11 @@ use express::blueprint::ValueSpec;
 
 type DynError = Box<dyn Error>;
 
-pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
+pub fn init(args: &ArgMatches) -> Result<(), DynError> {
     // Parse CLI arguments.
-    let template = matches.value_of("template").unwrap();
-    let name = matches.value_of("name").unwrap();
-    let output_dir = Path::new(matches.value_of("dir").unwrap_or(name));
+    let template = args.value_of("template").unwrap();
+    let name = args.value_of("name").unwrap();
+    let output_dir = Path::new(args.value_of("dir").unwrap_or(name));
 
     // Attempt to read the provided blueprint.
     let blueprint = Blueprint::new(template)?;
@@ -33,7 +33,7 @@ pub fn init(matches: &ArgMatches) -> Result<(), DynError> {
                                                    .collect();
 
     // If some values were provided via CLI arguments, merge those in.
-    if let Some(cli_values) = matches.values_of("value") {
+    if let Some(cli_values) = args.values_of("value") {
         let cli_values: Result<Vec<_>, _> = cli_values.map(parse_value).collect();
         values.extend(cli_values?);
     }
