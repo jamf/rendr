@@ -90,7 +90,7 @@ pipeline {
             }
 
             environment {
-                GITHUB_TOKEN = '' // TODO credentials '...'
+                GITHUB_TOKEN = 'github-token'
                 VERSION = "${params.RELEASE ? params.VERSION : env.TAG_NAME}"
             }
 
