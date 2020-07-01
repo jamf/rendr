@@ -90,7 +90,9 @@ pipeline {
             }
 
             environment {
+                GITHUB_USER = 'jamfdevops'
                 GITHUB_TOKEN = 'github-token'
+                HUB_VERBOSE = '1'
                 VERSION = "${params.RELEASE ? params.VERSION : env.TAG_NAME}"
             }
 
