@@ -101,10 +101,11 @@ pipeline {
                                 |url: "https://github.com/jamf/express/releases/download/$env.VERSION/express-darwin"
                                 |sha256: "$sha256"
                                 """.trim().stripMargin()
-
-                        sh label: 'Homebrew metadata', script: 'cat metadata/express.yaml'
+                        sh label: 'Update Homebrew metadata', "echo '$metadata' > metadata/express.yaml"
+                        sh label: 'Inspect Homebrew metadata', script: 'cat metadata/express.yaml'
                         sh label: 'Pushing changes to Homebrew tap', script: """
-                           echo '$metadata' > metadata/express.yaml
+                           git config user.email "devops@jamf.com"
+                           git config user.name "Jenkins"
                            hub add metadata/express.yaml
                            hub commit -m "Update express formula to version $VERSION"
                            hub push
