@@ -8,6 +8,10 @@ pipeline {
         string(name: 'VERSION', defaultValue: '', description: 'Release version')
     }
 
+    environment {
+        VERSION = "${params.RELEASE ? params.VERSION : env.TAG_NAME}"
+    }
+
     stages {
         stage ('Run tests') {
             agent {
@@ -48,9 +52,11 @@ pipeline {
                     steps {
                         sh 'brew install rust'
                         sh 'cargo build --release'
+                        sh 'sha256sum target/release/express | awk \'{print $1}\' > express-darwin.sha256'
                         sh 'mv target/release/express express-darwin'
-                        archiveArtifacts 'express-darwin'
+                        archiveArtifacts 'express-darwin,express-darwin.sha256'
                         stash name: 'mac-cli', includes: 'express-darwin'
+                        stash name: 'mac-sha', includes: 'express-darwin.sha256'
                     }
                 }
             }
@@ -75,13 +81,36 @@ pipeline {
             environment {
                 GITHUB_USER = 'jamfdevops'
                 GITHUB_TOKEN = credentials 'github-token'
-                VERSION = "${params.RELEASE ? params.VERSION : env.TAG_NAME}"
             }
 
             steps {
+                // Create GitHub release
                 unstash 'mac-cli'
                 unstash 'linux-cli'
-                sh "hub release create $VERSION -m $VERSION -t master -a express-darwin -a express-linux"
+                sh label: 'Creating GitHub release', script: "hub release create $VERSION -m $VERSION -t master -a express-darwin -a express-linux"
+
+                // Update Jamf Homebrew tap with latest express version
+                dir('homebrew-tap') {
+                    git url: 'https://github.com/jamf/homebrew-tap', changelog: false, poll: false, credentialsId: 'e06e287d-0fcb-4f24-8137-7f7f9c60e09f'
+                    unstash 'mac-sha'
+
+                    script {
+                        def sha256 = readFile('express-darwin.sha256')
+                        def metadata = """
+                                |version: "$env.VERSION"
+                                |url: "https://github.com/jamf/express/releases/download/$env.VERSION/express-darwin"
+                                |sha256: "$sha256"
+                                """.trim().stripMargin()
+
+                        sh label: 'Homebrew metadata', script: 'cat metadata/express.yaml'
+                        sh label: 'Pushing changes to Homebrew tap', script: """
+                           echo '$metadata' > metadata/express.yaml
+                           hub add metadata/express.yaml
+                           hub commit -m "Update express formula to version $VERSION"
+                           hub push
+                           """
+                    }
+                }
             }
         }
     }
