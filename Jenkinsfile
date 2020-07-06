@@ -83,7 +83,7 @@ pipeline {
                     unstash 'mac-sha'
 
                     script {
-                        def sha256 = readFile('express-darwin.sha256')
+                        def sha256 = readFile('express-darwin.sha256').trim()
                         def metadata = """
                                 |version: "$env.VERSION"
                                 |url: "https://github.com/jamf/express/releases/download/$env.VERSION/express-darwin"
