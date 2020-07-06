@@ -91,7 +91,7 @@ pipeline {
 
                 // Update Jamf Homebrew tap with latest express version
                 dir('homebrew-tap') {
-                    git url: 'https://github.com/jamf/homebrew-tap', changelog: false, poll: false, credentialsId: 'e06e287d-0fcb-4f24-8137-7f7f9c60e09f'
+                    git url: 'https://github.com/jamf/homebrew-tap', branch: 'master', changelog: false, poll: false, credentialsId: 'e06e287d-0fcb-4f24-8137-7f7f9c60e09f'
                     unstash 'mac-sha'
 
                     script {
