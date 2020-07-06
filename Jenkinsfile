@@ -13,20 +13,6 @@ pipeline {
     }
 
     stages {
-        stage ('Run tests') {
-            agent {
-                kubernetes {
-                    label 'rust'
-                    defaultContainer 'rust'
-                    yamlFile 'rust-pod.yaml'
-                }
-            }
-
-            steps {
-                sh 'cargo test'
-            }
-        }
-
         stage('Build') {
             parallel {
                 stage('Linux build') {
@@ -39,6 +25,7 @@ pipeline {
                     }
 
                     steps {
+                        sh 'cargo test'
                         sh 'cargo build --release'
                         sh 'mv target/release/express express-linux'
                         archiveArtifacts 'express-linux'
@@ -51,6 +38,7 @@ pipeline {
 
                     steps {
                         sh 'brew install rust'
+                        sh 'cargo test'
                         sh 'cargo build --release'
                         sh 'mv target/release/express express-darwin'
                         sh 'openssl sha256 -r express-darwin | awk \'{print $1}\' > express-darwin.sha256'
