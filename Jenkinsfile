@@ -108,7 +108,7 @@ pipeline {
                            git config user.name "Jenkins"
                            hub add metadata/express.yaml
                            hub commit -m "Update express formula to version $VERSION"
-                           hub push
+                           hub push origin master
                            """
                     }
                 }
