@@ -96,7 +96,8 @@ pipeline {
                            git config user.name "Jenkins"
                            hub add metadata/express.yaml
                            hub commit -m "Update express formula to version $VERSION"
-                           hub push https://$GITHUB_USER:$GITHUB_TOKEN@github.com/jamf/homebrew-tap origin master
+                           git config --local credential.helper "!f() { echo username=\\$GITHUB_USER; echo password=\\$GITHUB_TOKEN; }; f"
+                           hub push origin master
                            """
                     }
                 }
