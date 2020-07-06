@@ -52,8 +52,8 @@ pipeline {
                     steps {
                         sh 'brew install rust'
                         sh 'cargo build --release'
-                        sh 'sha256sum target/release/express | awk \'{print $1}\' > express-darwin.sha256'
                         sh 'mv target/release/express express-darwin'
+                        sh 'openssl sha256 -r express-darwin | awk \'{print $1}\' > express-darwin.sha256'
                         archiveArtifacts 'express-darwin,express-darwin.sha256'
                         stash name: 'mac-cli', includes: 'express-darwin'
                         stash name: 'mac-sha', includes: 'express-darwin.sha256'
@@ -101,7 +101,7 @@ pipeline {
                                 |url: "https://github.com/jamf/express/releases/download/$env.VERSION/express-darwin"
                                 |sha256: "$sha256"
                                 """.trim().stripMargin()
-                        sh label: 'Update Homebrew metadata', "echo '$metadata' > metadata/express.yaml"
+                        sh label: 'Update Homebrew metadata', script: "echo '$metadata' > metadata/express.yaml"
                         sh label: 'Inspect Homebrew metadata', script: 'cat metadata/express.yaml'
                         sh label: 'Pushing changes to Homebrew tap', script: """
                            git config user.email "devops@jamf.com"
