@@ -160,6 +160,10 @@ impl Blueprint {
         io::stdout().write_all(&output.stdout)?;
         io::stderr().write_all(&output.stderr)?;
 
+        // TODO: return an error including the stderr message and exit code
+        // if !output.status.success() {
+        // }
+
         Ok(())
     }
 }
