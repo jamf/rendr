@@ -83,7 +83,7 @@ impl Blueprint {
             return Ok(None);
         }
 
-        Ok(Some(Script::new(script.to_string(), script_path)))
+        Ok(Some(Script::new(script, script_path)))
     }
 
     pub fn values(&self) -> impl Iterator<Item=&ValueSpec> {
@@ -172,10 +172,10 @@ struct Script {
 }
 
 impl Script {
-    fn new(name: String, path: PathBuf) -> Self {
+    fn new(name: &str, path: PathBuf) -> Self {
         Script {
-            name,
-            path,
+            name: name.to_string(),
+            path: path,
         }
     }
 
@@ -294,6 +294,7 @@ mod tests {
     use tempdir::TempDir;
     use crate::blueprint::Blueprint;
     use crate::templating::Mustache;
+    use super::*;
     
     #[test]
     fn parse_example_blueprint_metadata() {
@@ -347,7 +348,20 @@ mod tests {
     }
 
     #[test]
-    fn post_script_works() {
+    fn script_can_be_run_successfully() {
+        let script = Script::new("some script", PathBuf::from("test_assets/scripts/hello_world.sh"));
 
+        let values = HashMap::new();
+        script.run(Path::new("."), &values).unwrap();
+    }
+
+    #[test]
+    fn run_script_returns_error_on_failing_script() {
+        let script = Script::new("some script", PathBuf::from("test_assets/scripts/failing.sh"));
+
+        let values = HashMap::new();
+        if let Ok(()) = script.run(Path::new("."), &values) {
+            panic!("The failing script didn't cause an error!");
+        }
     }
 }
