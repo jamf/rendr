@@ -3,7 +3,7 @@ use std::fmt::Formatter;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::error::Error;
 use std::fs;
 use std::io::{self, Write};
@@ -191,6 +191,8 @@ impl Script {
             .arg(&self.path)
             .envs(values)
             .current_dir(working_dir)
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
             .output()
             .expect("failed to execute script");
 
