@@ -1,10 +1,12 @@
-use std::path::PathBuf;
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::collections::HashMap;
 use std::path::Path;
+use std::path::PathBuf;
+use std::process::Command;
 use std::error::Error;
 use std::fs;
+use std::io::{self, Write};
 
 use tempdir::TempDir;
 use git2::Repository;
@@ -125,6 +127,38 @@ impl Blueprint {
                 self.render_rec(engine, values, &path, &output_dir)?;
             }
         }
+
+        Ok(())
+    }
+
+    pub fn run_script(&self, script: &str, working_dir: &Path, values: &HashMap<&str, &str>) -> Result<(), DynError> {
+        let mut script_path = PathBuf::new();
+        script_path.push(self.dir.path().canonicalize().unwrap());
+        script_path.push("scripts");
+        script_path.push(script);
+
+        if !script_path.exists() {
+            println!("No {} script found in blueprint scripts directory - skipping", script);
+            return Ok(());
+        }
+
+        println!("Running blueprint script: scripts/{}", script);
+
+        #[cfg(debug)]
+        println!("  Blueprint script full path: {:?}", script_path);
+        println!("  Blueprint script working dir: {:?}", working_dir);
+
+        let output = Command::new("sh")
+            .arg("-c")
+            .arg(script_path)
+            .envs(values)
+            .current_dir(working_dir)
+            .output()
+            .expect("failed to execute script");
+
+        println!("Status: {}", output.status);
+        io::stdout().write_all(&output.stdout)?;
+        io::stderr().write_all(&output.stderr)?;
 
         Ok(())
     }

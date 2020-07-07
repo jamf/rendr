@@ -54,6 +54,7 @@ pub fn init(args: &ArgMatches) -> Result<(), DynError> {
     let mustache = templating::Mustache::new();
 
     blueprint.render(&mustache, &values, &output_dir)?;
+    blueprint.run_script("post-render.sh", &output_dir, &values)?;
 
     Ok(())
 }
