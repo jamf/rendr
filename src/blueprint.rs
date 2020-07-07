@@ -160,9 +160,36 @@ impl Blueprint {
         io::stdout().write_all(&output.stdout)?;
         io::stderr().write_all(&output.stderr)?;
 
-        // TODO: return an error including the stderr message and exit code
-        // if !output.status.success() {
-        // }
+        if !output.status.success() {
+            let e = ScriptError::new(output.status.code());
+            return Err(e.into());
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+struct ScriptError {
+    status: Option<i32>,
+}
+
+impl ScriptError {
+    fn new(status: Option<i32>) -> Self {
+        ScriptError {
+            status,
+        }
+    }
+}
+
+impl Error for ScriptError {}
+
+impl Display for ScriptError {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self.status {
+            Some(status) => write!(f, "Script failed with status {}", status)?,
+            None         => write!(f, "Script failed, but didn't exit!")?,
+        }
 
         Ok(())
     }
@@ -277,5 +304,10 @@ mod tests {
 
         assert!(test.find("name: my-project").is_some());
         assert!(test.find("version: 1").is_some());
+    }
+
+    #[test]
+    fn post_script_works() {
+
     }
 }
