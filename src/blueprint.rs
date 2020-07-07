@@ -66,24 +66,24 @@ impl Blueprint {
     }
 
     fn find_scripts(&mut self) -> Result<(), DynError> {
-        self.find_script("post-render")
+        self.post_script = self.find_script("post-render")?;
+
+        Ok(())
     }
 
-    fn find_script(&mut self, script: &str) -> Result<(), DynError> {
+    fn find_script(&mut self, script: &str) -> Result<Option<Script>, DynError> {
         let mut script_path = PathBuf::new();
-        script_path.push(self.dir.path().canonicalize().unwrap());
+        script_path.push(self.dir.path().canonicalize()?);
         script_path.push("scripts");
         script_path.push(format!("{}.sh", script));
 
         if !script_path.exists() {
             #[cfg(debug)]
             eprintln!("No {} script found in blueprint scripts directory - skipping", script);
-            return Ok(());
+            return Ok(None);
         }
 
-        self.post_script = Some(Script::new(script.to_string(), script_path));
-
-        Ok(())
+        Ok(Some(Script::new(script.to_string(), script_path)))
     }
 
     pub fn values(&self) -> impl Iterator<Item=&ValueSpec> {
