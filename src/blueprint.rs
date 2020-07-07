@@ -20,15 +20,23 @@ type DynError = Box<dyn Error>;
 pub struct Blueprint {
     metadata: BlueprintMetadata,
     dir: BlueprintDir,
+    post_script: Option<Script>,
 }
 
 impl Blueprint {
     pub fn new(path: &str) -> Result<Blueprint, DynError> {
+        let mut blueprint;
+
         if Path::new(path).exists() {
-            return Self::from_dir(path);
+            blueprint = Self::from_dir(path)?;
+        }
+        else {
+            blueprint = Self::from_repo(path)?;
         }
 
-        Self::from_repo(path)
+        blueprint.find_scripts()?;
+
+        Ok(blueprint)
     }
 
     fn from_repo(path: &str) -> Result<Blueprint, DynError> {
@@ -53,7 +61,29 @@ impl Blueprint {
         Ok(Blueprint {
             metadata,
             dir,
+            post_script: None,
         })
+    }
+
+    fn find_scripts(&mut self) -> Result<(), DynError> {
+        self.find_script("post-render")
+    }
+
+    fn find_script(&mut self, script: &str) -> Result<(), DynError> {
+        let mut script_path = PathBuf::new();
+        script_path.push(self.dir.path().canonicalize().unwrap());
+        script_path.push("scripts");
+        script_path.push(format!("{}.sh", script));
+
+        if !script_path.exists() {
+            #[cfg(debug)]
+            eprintln!("No {} script found in blueprint scripts directory - skipping", script);
+            return Ok(());
+        }
+
+        self.post_script = Some(Script::new(script.to_string(), script_path));
+
+        Ok(())
     }
 
     pub fn values(&self) -> impl Iterator<Item=&ValueSpec> {
@@ -83,6 +113,10 @@ impl Blueprint {
         }
 
         self.render_rec(engine, values, &self.dir.path().join("blueprint"), output_dir)?;
+
+        if let Some(post_script) = &self.post_script {
+            post_script.run(output_dir, values)?;
+        }
 
         Ok(())
     }
@@ -130,27 +164,31 @@ impl Blueprint {
 
         Ok(())
     }
+}
 
-    pub fn run_script(&self, script: &str, working_dir: &Path, values: &HashMap<&str, &str>) -> Result<(), DynError> {
-        let mut script_path = PathBuf::new();
-        script_path.push(self.dir.path().canonicalize().unwrap());
-        script_path.push("scripts");
-        script_path.push(script);
+struct Script {
+    name: String,
+    path: PathBuf,
+}
 
-        if !script_path.exists() {
-            println!("No {} script found in blueprint scripts directory - skipping", script);
-            return Ok(());
+impl Script {
+    fn new(name: String, path: PathBuf) -> Self {
+        Script {
+            name,
+            path,
         }
+    }
 
-        println!("Running blueprint script: scripts/{}", script);
+    fn run(&self, working_dir: &Path, values: &HashMap<&str, &str>) -> Result<(), DynError> {
+        println!("Running blueprint script: {}", &self.name);
 
         #[cfg(debug)]
-        println!("  Blueprint script full path: {:?}", script_path);
+        println!("  Blueprint script full path: {:?}", &self.path);
         println!("  Blueprint script working dir: {:?}", working_dir);
 
         let output = Command::new("sh")
             .arg("-c")
-            .arg(script_path)
+            .arg(&self.path)
             .envs(values)
             .current_dir(working_dir)
             .output()
@@ -161,7 +199,7 @@ impl Blueprint {
         io::stderr().write_all(&output.stderr)?;
 
         if !output.status.success() {
-            let e = ScriptError::new(output.status.code());
+            let e = ScriptError::new(output.status.code(), String::from_utf8(output.stderr)?);
             return Err(e.into());
         }
 
@@ -172,12 +210,14 @@ impl Blueprint {
 #[derive(Debug)]
 struct ScriptError {
     status: Option<i32>,
+    msg: String,
 }
 
 impl ScriptError {
-    fn new(status: Option<i32>) -> Self {
+    fn new(status: Option<i32>, msg: String) -> Self {
         ScriptError {
             status,
+            msg,
         }
     }
 }
