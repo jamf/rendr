@@ -132,14 +132,15 @@ impl Blueprint {
 
             if path.is_file() {
                 println!("Found file {:?}", &path);
-
-                let mut contents = fs::read_to_string(&path)?;
-
-                if !self.is_excluded(file.path_from_blueprint_root) {
-                    contents = engine.render_template(&contents, &values)?;
+                
+                if self.is_excluded(&file.path_from_blueprint_root) {
+                    fs::copy(path, output_path)?;
                 }
-
-                fs::write(output_path, &contents)?;
+                else {
+                    let contents = fs::read_to_string(&path)?;
+                    let contents = engine.render_template(&contents, &values)?;
+                    fs::write(output_path, &contents)?;
+                }
             }
             else if path.is_dir() {
                 if !output_path.is_dir() {
