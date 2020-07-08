@@ -311,12 +311,9 @@ mod tests {
 
         let output_dir = TempDir::new("my-project").unwrap();
 
-        let values: HashMap<_, _> = vec![("name", "my-project"), ("version", "1"), ("foobar", "stuff")]
-            .iter().cloned().collect();
-
         let mustache = Mustache::new();
 
-        blueprint.render(&mustache, &values, output_dir.path()).unwrap();
+        blueprint.render(&mustache, &test_values(), output_dir.path()).unwrap();
 
         let test = fs::read_to_string(output_dir.path().join("test.yaml")).unwrap();
         let another_test = fs::read_to_string(output_dir.path().join("another-test.yaml")).unwrap();
@@ -333,12 +330,9 @@ mod tests {
 
         let output_dir = TempDir::new("my-project").unwrap();
 
-        let values: HashMap<_, _> = vec![("name", "my-project"), ("version", "1"), ("foobar", "stuff")]
-            .iter().cloned().collect();
-
         let mustache = Mustache::new();
 
-        blueprint.render(&mustache, &values, output_dir.path()).unwrap();
+        blueprint.render(&mustache, &test_values(), output_dir.path()).unwrap();
 
         let test = fs::read_to_string(output_dir.path().join("dir/test.yaml")).unwrap();
 
@@ -355,12 +349,33 @@ mod tests {
     }
 
     #[test]
-    fn run_script_returns_error_on_failing_script() {
+    fn running_failing_script_returns_an_error() {
         let script = Script::new("some script", PathBuf::from("test_assets/scripts/failing.sh"));
 
         let values = HashMap::new();
         if let Ok(()) = script.run(Path::new("."), &values) {
             panic!("The failing script didn't cause an error!");
         }
+    }
+
+    #[test]
+    fn blueprint_post_script_is_found_and_run() {
+        let blueprint = Blueprint::new("test_assets/example_blueprint_with_scripts").unwrap();
+
+        let output_dir = TempDir::new("my-project").unwrap();
+
+        let mustache = Mustache::new();
+
+        blueprint.render(&mustache, &test_values(), output_dir.path()).unwrap();
+
+        let script_output = fs::read_to_string(output_dir.path().join("script_output.md")).unwrap();
+
+        assert_eq!(script_output.as_str(), "something123");
+    }
+
+    // Test helpers
+    fn test_values() -> HashMap<&'static str, &'static str> {
+        vec![("name", "my-project"), ("version", "1"), ("foobar", "stuff")]
+            .iter().cloned().collect()
     }
 }
