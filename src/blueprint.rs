@@ -1,8 +1,9 @@
-use std::path::PathBuf;
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::collections::HashMap;
 use std::path::Path;
+use std::path::PathBuf;
+use std::process::{Command, Stdio};
 use std::error::Error;
 use std::fs;
 
@@ -18,15 +19,23 @@ type DynError = Box<dyn Error>;
 pub struct Blueprint {
     metadata: BlueprintMetadata,
     dir: BlueprintDir,
+    post_script: Option<Script>,
 }
 
 impl Blueprint {
     pub fn new(path: &str) -> Result<Blueprint, DynError> {
+        let mut blueprint;
+
         if Path::new(path).exists() {
-            return Self::from_dir(path);
+            blueprint = Self::from_dir(path)?;
+        }
+        else {
+            blueprint = Self::from_repo(path)?;
         }
 
-        Self::from_repo(path)
+        blueprint.find_scripts()?;
+
+        Ok(blueprint)
     }
 
     fn from_repo(path: &str) -> Result<Blueprint, DynError> {
@@ -51,7 +60,29 @@ impl Blueprint {
         Ok(Blueprint {
             metadata,
             dir,
+            post_script: None,
         })
+    }
+
+    fn find_scripts(&mut self) -> Result<(), DynError> {
+        self.post_script = self.find_script("post-render")?;
+
+        Ok(())
+    }
+
+    fn find_script(&mut self, script: &str) -> Result<Option<Script>, DynError> {
+        let mut script_path = PathBuf::new();
+        script_path.push(self.dir.path().canonicalize()?);
+        script_path.push("scripts");
+        script_path.push(format!("{}.sh", script));
+
+        if !script_path.exists() {
+            #[cfg(debug)]
+            eprintln!("No {} script found in blueprint scripts directory - skipping", script);
+            return Ok(None);
+        }
+
+        Ok(Some(Script::new(script, script_path)))
     }
 
     pub fn values(&self) -> impl Iterator<Item=&ValueSpec> {
@@ -82,6 +113,10 @@ impl Blueprint {
 
         self.render_rec(engine, values, &self.dir.path().join("blueprint"), output_dir)?;
 
+        if let Some(post_script) = &self.post_script {
+            post_script.run(output_dir, values)?;
+        }
+
         Ok(())
     }
 
@@ -93,7 +128,7 @@ impl Blueprint {
             output_dir: &Path,
     ) -> Result<(), DynError> {
         // Iterate through the blueprint templates and render them into our output
-        // directory.  
+        // directory.
 
         println!("render_rec: {:?} {:?}", src_dir, output_dir);
         for entry in fs::read_dir(src_dir)? {
@@ -130,6 +165,75 @@ impl Blueprint {
     }
 }
 
+struct Script {
+    name: String,
+    path: PathBuf,
+}
+
+impl Script {
+    fn new(name: &str, path: PathBuf) -> Self {
+        Script {
+            name: name.to_string(),
+            path: path,
+        }
+    }
+
+    fn run(&self, working_dir: &Path, values: &HashMap<&str, &str>) -> Result<(), DynError> {
+        println!("Running blueprint script: {}", &self.name);
+
+        #[cfg(debug)]
+        println!("  Blueprint script full path: {:?}", &self.path);
+        println!("  Blueprint script working dir: {:?}", working_dir);
+
+        let output = Command::new("sh")
+            .arg("-c")
+            .arg(&self.path)
+            .envs(values)
+            .current_dir(working_dir)
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .expect("failed to execute script");
+
+        println!("Status: {}", output.status);
+
+        if !output.status.success() {
+            let e = ScriptError::new(output.status.code(), String::from_utf8(output.stderr)?);
+            return Err(e.into());
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+struct ScriptError {
+    status: Option<i32>,
+    msg: String,
+}
+
+impl ScriptError {
+    fn new(status: Option<i32>, msg: String) -> Self {
+        ScriptError {
+            status,
+            msg,
+        }
+    }
+}
+
+impl Error for ScriptError {}
+
+impl Display for ScriptError {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self.status {
+            Some(status) => write!(f, "Script failed with status {}", status)?,
+            None         => write!(f, "Script failed, but didn't exit!")?,
+        }
+
+        Ok(())
+    }
+}
+
 enum BlueprintDir {
     TempDir(TempDir),
     Path(PathBuf),
@@ -151,7 +255,7 @@ impl Display for Blueprint {
         writeln!(f, "{} v{}", &self.metadata.name, &self.metadata.version)?;
         writeln!(f, "{}", &self.metadata.author)?;
         writeln!(f, "{}", &self.metadata.description)?;
-        
+
         Ok(())
     }
 }
@@ -189,7 +293,8 @@ mod tests {
     use tempdir::TempDir;
     use crate::blueprint::Blueprint;
     use crate::templating::Mustache;
-    
+    use super::*;
+
     #[test]
     fn parse_example_blueprint_metadata() {
         let blueprint = Blueprint::new("test_assets/example_blueprint").unwrap();
@@ -206,12 +311,9 @@ mod tests {
 
         let output_dir = TempDir::new("my-project").unwrap();
 
-        let values: HashMap<_, _> = vec![("name", "my-project"), ("version", "1"), ("foobar", "stuff")]
-            .iter().cloned().collect();
-        
         let mustache = Mustache::new();
 
-        blueprint.render(&mustache, &values, output_dir.path()).unwrap();
+        blueprint.render(&mustache, &test_values(), output_dir.path()).unwrap();
 
         let test = fs::read_to_string(output_dir.path().join("test.yaml")).unwrap();
         let another_test = fs::read_to_string(output_dir.path().join("another-test.yaml")).unwrap();
@@ -228,16 +330,52 @@ mod tests {
 
         let output_dir = TempDir::new("my-project").unwrap();
 
-        let values: HashMap<_, _> = vec![("name", "my-project"), ("version", "1"), ("foobar", "stuff")]
-            .iter().cloned().collect();
-        
         let mustache = Mustache::new();
 
-        blueprint.render(&mustache, &values, output_dir.path()).unwrap();
+        blueprint.render(&mustache, &test_values(), output_dir.path()).unwrap();
 
         let test = fs::read_to_string(output_dir.path().join("dir/test.yaml")).unwrap();
 
         assert!(test.find("name: my-project").is_some());
         assert!(test.find("version: 1").is_some());
+    }
+
+    #[test]
+    fn script_can_be_run_successfully() {
+        let script = Script::new("some script", PathBuf::from("test_assets/scripts/hello_world.sh"));
+
+        let values = HashMap::new();
+        script.run(Path::new("."), &values).unwrap();
+    }
+
+    #[test]
+    fn running_failing_script_returns_an_error() {
+        let script = Script::new("some script", PathBuf::from("test_assets/scripts/failing.sh"));
+
+        let values = HashMap::new();
+        if let Ok(()) = script.run(Path::new("."), &values) {
+            panic!("The failing script didn't cause an error!");
+        }
+    }
+
+    #[test]
+    fn blueprint_post_script_is_found_and_run() {
+        let blueprint = Blueprint::new("test_assets/example_blueprint_with_scripts").unwrap();
+
+        let output_dir = TempDir::new("my-project").unwrap();
+
+        let mustache = Mustache::new();
+
+        blueprint.render(&mustache, &test_values(), output_dir.path()).unwrap();
+
+        let script_output = fs::read_to_string(output_dir.path().join("script_output.md")).unwrap();
+
+        assert_eq!(script_output.as_str(), "something123");
+    }
+
+    // Test helpers
+    fn test_values() -> HashMap<&'static str, &'static str> {
+        vec![("name", "my-project"), ("version", "1"), ("foobar", "stuff")]
+            .iter().cloned().collect()
     }
 }
