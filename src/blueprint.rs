@@ -6,7 +6,6 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::error::Error;
 use std::fs;
-use std::io::{self, Write};
 
 use tempdir::TempDir;
 use git2::Repository;
