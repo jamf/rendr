@@ -32,7 +32,7 @@ With these basic features, templates are already highly customizable! If you hav
 
 ## Usage
 
-Install the CLI via Homebrew:
+Install the CLI via [Homebrew](https://brew.sh):
 ```sh
 brew install jamf/tap/express
 ```
