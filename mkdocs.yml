@@ -1,0 +1,17 @@
+site_name: Express
+site_description: A project scaffolding tool
+site_author: Jamf
+
+repo_url: https://github.com/jamf/express
+repo_name: GitHub
+
+nav:
+  - Home: index.md
+  - CLI User's Guide: cli.md
+  - Template Developer's Guide: templates.md
+
+theme:
+  name: material
+  palette:
+    primary: light blue
+    accent: blue
