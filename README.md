@@ -11,18 +11,16 @@ This project is currently under heavy development. The API is expected to change
 
 _Express_ is a scaffolding tool which allows generating entire projects (or anything else) from templates, using standard templating engines and simple customization via parameters. It is generic enough to apply to a wide variety of applications and tech stacks, but powerful and flexible enough to provide value, fast. The tool itself is really a generic template renderer. It's up to you, the template creator, to decide what to put in your template.
 
+### Use cases
+
 Here are just a few possible use cases:
 
 * Enable rapid spin-up of new projects, complete with CI/CD pipelines, code quality gates, security analysis, and more
 * Ship "Hello, World!" projects immediately to production, enabling instant iteration on features
-* CI/CD standards baked into projects from the start, easily kept up to date
+* Include CI/CD standards baked into projects from the start, easily kept up to date
 * Simplify repeated patterns like creating new microservices, libraries, or submodules on an existing project
-* Foster innovation by enabling rapid prototyping of new applications
 
-The basic usage looks like this:
-```sh
-express init my-project --template https://github.com/your/template
-```
+### Template format
 
 Templates consist of template files, scripts, and metadata. Full docs on the template format are coming soon!
 
@@ -34,12 +32,13 @@ With these basic features, templates are already highly customizable! If you hav
 
 ## Usage
 
-Install the CLI via Homebrew, or downloading directly from the [Releases](https://github.com/jamf/express/releases) page.
+Install the CLI via Homebrew:
 ```sh
 brew install jamf/tap/express
 ```
+Alternatively, download the CLI binary directly from the [Releases](https://github.com/jamf/express/releases) page and put it on your system path.
 
-View avaiable commands:
+View available commands:
 ```sh
 ❯ express help
 A project scaffolding tool
@@ -54,6 +53,16 @@ FLAGS:
 SUBCOMMANDS:
     help    Prints this message or the help of the given subcommand
     init    Initializes a project from a template
+```
+
+The basic usage to generate a project looks like this:
+```sh
+express init my-project --template https://github.com/your/template
+```
+
+Provide values to the template with the `-v` flag:
+```sh
+express init my-project -t https://github.com/your/template -v name:foo -v version:1.0.0
 ```
 
 ## Development
