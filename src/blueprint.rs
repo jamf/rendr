@@ -1,3 +1,4 @@
+use walkdir::DirEntry;
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::collections::HashMap;
@@ -11,6 +12,7 @@ use tempdir::TempDir;
 use git2::Repository;
 use serde::Deserialize;
 use serde_yaml;
+use walkdir::WalkDir;
 
 use crate::templating::TemplatingEngine;
 
@@ -100,6 +102,11 @@ impl Blueprint {
             .filter(|v| v.required)
     }
 
+    pub fn files(&self) -> impl Iterator<Item=Result<File, walkdir::Error>> {
+        let blueprint_root = self.dir.path().join("blueprint");
+        Files::new(&blueprint_root)
+    }
+
     pub fn render<TE: TemplatingEngine>(
             &self,
             engine: &TE,
@@ -111,7 +118,26 @@ impl Blueprint {
             fs::create_dir(output_dir)?;
         }
 
-        self.render_rec(engine, values, &self.dir.path().join("blueprint"), output_dir)?;
+        for file in self.files() {
+            let file = file?;
+            let path = file.path();
+            let output_path = output_dir.join(file.path_from_blueprint_root());
+
+            if path.is_file() {
+                println!("Found file {:?}", &path);
+
+                let contents = fs::read_to_string(&path)?;
+
+                let contents = engine.render_template(&contents, &values)?;
+
+                fs::write(output_path, &contents)?;
+            }
+            else if path.is_dir() {
+                if !output_path.is_dir() {
+                    fs::create_dir(&output_path)?;
+                }
+            }
+        }
 
         if let Some(post_script) = &self.post_script {
             post_script.run(output_dir, values)?;
@@ -119,49 +145,64 @@ impl Blueprint {
 
         Ok(())
     }
+}
 
-    pub fn render_rec<TE: TemplatingEngine>(
-            &self,
-            engine: &TE,
-            values: &HashMap<&str, &str>,
-            src_dir: &Path,
-            output_dir: &Path,
-    ) -> Result<(), DynError> {
-        // Iterate through the blueprint templates and render them into our output
-        // directory.
+pub struct Files {
+    walkdir: walkdir::IntoIter,
+    blueprint_root: PathBuf,
+}
 
-        println!("render_rec: {:?} {:?}", src_dir, output_dir);
-        for entry in fs::read_dir(src_dir)? {
-            let path = entry?.path();
+impl Files {
+    fn new(blueprint_root: &Path) -> Self {
+        Files {
+            walkdir: WalkDir::new(blueprint_root).into_iter(),
+            blueprint_root: blueprint_root.to_path_buf(),
+        }
+    }
+}
 
-            if path.is_file() {
-                println!("Found file {:?}", &path);
+impl Iterator for Files {
+    type Item = walkdir::Result<File>;
 
-                let filename = path.file_name()
-                    .unwrap()
-                    .to_str()
-                    .expect("Invalid utf8 in filepath.");
-
-                let contents = fs::read_to_string(&path)?;
-
-                let contents = engine.render_template(&contents, &values)?;
-
-                fs::write(output_dir.join(filename), &contents)?;
-            }
-            else if path.is_dir() {
-                let dirname = path.file_name()
-                    .unwrap()
-                    .to_str()
-                    .expect("Invalid utf8 in filepath.");
-                let output_dir = output_dir.join(dirname);
-                if !output_dir.is_dir() {
-                    fs::create_dir(&output_dir)?;
-                }
-                self.render_rec(engine, values, &path, &output_dir)?;
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(next) = self.walkdir.next() {
+            match next {
+                Ok(entry) => return Some(Ok(File::new(&self.blueprint_root, entry))),
+                Err(e)    => return Some(Err(e)),
             }
         }
 
-        Ok(())
+        None
+    }
+}
+
+pub struct File {
+    dir_entry: DirEntry,
+    path_from_blueprint_root: PathBuf,
+}
+
+impl File {
+    fn new<P: AsRef<Path>>(blueprint_root: P, dir_entry: DirEntry) -> Self {
+        let depth = blueprint_root.as_ref().components().count();
+        let path_from_blueprint_root = dir_entry
+            .path()
+            .components()
+            .skip(depth)
+            .map(|c| c.as_os_str())
+            .fold(PathBuf::new(), |a, b| a.join(b));
+
+        File {
+            dir_entry,
+            path_from_blueprint_root: path_from_blueprint_root.to_path_buf(),
+        }
+    }
+
+    fn path(&self) -> &Path {
+        self.dir_entry.path()
+    }
+
+    fn path_from_blueprint_root(&self) -> &Path {
+        &self.path_from_blueprint_root
     }
 }
 

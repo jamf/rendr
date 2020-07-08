@@ -19,6 +19,7 @@ openssl = { version = "0.10", features = ["vendored"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
 text_io = "0.1.8"
+walkdir = "2"
 
 [dev-dependencies]
 cargo-release = "0.13.0"
