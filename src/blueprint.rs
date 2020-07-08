@@ -129,7 +129,7 @@ impl Blueprint {
             output_dir: &Path,
     ) -> Result<(), DynError> {
         // Iterate through the blueprint templates and render them into our output
-        // directory.  
+        // directory.
 
         println!("render_rec: {:?} {:?}", src_dir, output_dir);
         for entry in fs::read_dir(src_dir)? {
@@ -197,8 +197,6 @@ impl Script {
             .expect("failed to execute script");
 
         println!("Status: {}", output.status);
-        io::stdout().write_all(&output.stdout)?;
-        io::stderr().write_all(&output.stderr)?;
 
         if !output.status.success() {
             let e = ScriptError::new(output.status.code(), String::from_utf8(output.stderr)?);
@@ -258,7 +256,7 @@ impl Display for Blueprint {
         writeln!(f, "{} v{}", &self.metadata.name, &self.metadata.version)?;
         writeln!(f, "{}", &self.metadata.author)?;
         writeln!(f, "{}", &self.metadata.description)?;
-        
+
         Ok(())
     }
 }
@@ -297,7 +295,7 @@ mod tests {
     use crate::blueprint::Blueprint;
     use crate::templating::Mustache;
     use super::*;
-    
+
     #[test]
     fn parse_example_blueprint_metadata() {
         let blueprint = Blueprint::new("test_assets/example_blueprint").unwrap();
@@ -316,7 +314,7 @@ mod tests {
 
         let values: HashMap<_, _> = vec![("name", "my-project"), ("version", "1"), ("foobar", "stuff")]
             .iter().cloned().collect();
-        
+
         let mustache = Mustache::new();
 
         blueprint.render(&mustache, &values, output_dir.path()).unwrap();
@@ -338,7 +336,7 @@ mod tests {
 
         let values: HashMap<_, _> = vec![("name", "my-project"), ("version", "1"), ("foobar", "stuff")]
             .iter().cloned().collect();
-        
+
         let mustache = Mustache::new();
 
         blueprint.render(&mustache, &values, output_dir.path()).unwrap();
