@@ -2,6 +2,9 @@ name: example-blueprint
 version: 1
 author: Brian S. <brian.stewart@jamf.com>, Tomasz K. <tomasz.kurcz@jamf.com>
 description: Just an example blueprint for `express`.
+exclusions:
+- "foo/non_existent_excluded_file"
+- "excluded_file"
 values:
 - name: name
   description: The name of your project

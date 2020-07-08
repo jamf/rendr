@@ -102,9 +102,16 @@ impl Blueprint {
             .filter(|v| v.required)
     }
 
-    pub fn files(&self) -> impl Iterator<Item=Result<File, walkdir::Error>> {
+    fn files(&self) -> impl Iterator<Item=Result<File, walkdir::Error>> {
         let blueprint_root = self.dir.path().join("blueprint");
         Files::new(&blueprint_root)
+    }
+
+    fn is_excluded<P: AsRef<Path>>(&self, file: P) -> bool {
+        self.metadata.exclusions
+            .iter()
+            .find(|item| item.as_path() == file.as_ref())
+            .is_some()
     }
 
     pub fn render<TE: TemplatingEngine>(
@@ -126,9 +133,11 @@ impl Blueprint {
             if path.is_file() {
                 println!("Found file {:?}", &path);
 
-                let contents = fs::read_to_string(&path)?;
+                let mut contents = fs::read_to_string(&path)?;
 
-                let contents = engine.render_template(&contents, &values)?;
+                if !self.is_excluded(file.path_from_blueprint_root) {
+                    contents = engine.render_template(&contents, &values)?;
+                }
 
                 fs::write(output_path, &contents)?;
             }
@@ -308,6 +317,8 @@ struct BlueprintMetadata {
     author: String,
     description: String,
     values: Vec<ValueSpec>,
+    #[serde(default)]
+    exclusions: Vec<PathBuf>,
 }
 
 #[derive(Deserialize)]
@@ -379,6 +390,21 @@ mod tests {
 
         assert!(test.find("name: my-project").is_some());
         assert!(test.find("version: 1").is_some());
+    }
+
+    #[test]
+    fn exclusions_work() {
+        let blueprint = Blueprint::new("test_assets/example_blueprint").unwrap();
+
+        let output_dir = TempDir::new("my-project").unwrap();
+
+        let mustache = Mustache::new();
+
+        blueprint.render(&mustache, &test_values(), output_dir.path()).unwrap();
+
+        let excluded_file = fs::read_to_string(output_dir.path().join("excluded_file")).unwrap();
+
+        assert!(excluded_file.find("{{ name }}").is_some());
     }
 
     #[test]
