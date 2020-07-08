@@ -21,18 +21,16 @@ Here are just a few possible use cases:
 
 The basic usage looks like this:
 ```sh
-express init my-project --template https://github.com/your/blueprint
+express init my-project --template https://github.com/your/template
 ```
 
-Blueprints consist of template files, scripts, and metadata.
+Templates consist of template files, scripts, and metadata. Full docs on the template format are coming soon!
 
-* Template files are simply text files that are rendered by a templating engine. Currently, [Mustache](http://mustache.github.io) is the embedded templating engine. This may expand in the future.
-* Metadata is provided in a `metadata.yaml` file in the root of the blueprint repo. It lists specific values that can be provided to the template. The user will be prompted for these values when generating the project. Values can also be provided with the `-v` flag for non-interactive use.
-* Scripts live in a `scripts` directory in the blueprint repo. Currently supported is the `post-render.sh` script, which runs after the templates are rendered. This is the place to customize the generated files or provide followup actions (like creating a remote repository or pipeline).
+* Template files live in the `blueprint` directory, and are rendered by the templating engine
+* Metadata is provided in a `metadata.yaml` file in the root of the template repo. It lists specific values that can be provided to the template, among other things.
+* Scripts live in a `scripts` directory in the template repo. This is the place to customize the generated files or automate followup actions (like creating a remote repository or pipeline).
 
 With these basic features, templates are already highly customizable! If you have other use cases that are not supported, feel free to let us know in the [issues](https://github.com/jamf/express/issues)!
-
-Full docs coming soon.
 
 ## Usage
 
@@ -107,11 +105,11 @@ Get the helpfile for the `init` subcommand.
 cargo run -- init -h
 ```
 
-Initialize a project from the [example-blueprint](https://stash.jamf.build/projects/SCAF/repos/example-blueprint/browse) blueprint.
+Initialize a project from the [Go microservice blueprint](https://stash.jamf.build/projects/SCAF/repos/blueprint-go-microservice/browse).
 ```sh
-cargo run -- init --template https://stash.jamf.build/scm/scaf/example-blueprint.git my-project -v name:foo
+cargo run -- init --template https://stash.jamf.build/scm/scaf/blueprint-go-microservice.git my-project -v name:foo
 ```
 
 ## Contributing
 
-Feedback and pull requests are welcome!
+Feedback and pull requests are welcome! Let us know if you have issues using the tool, or see use cases that are not yet supported. We'd love to expand its usefulness!
