@@ -1,2 +1,0 @@
-# Template Developer's Guide
-
