@@ -5,6 +5,7 @@ authors = ["Brian Stewart <brian.stewart@jamf.com>", "Tomasz Kurcz <tomasz.kurcz
 edition = "2018"
 build = "build.rs"
 autobins = false
+publish = false
 
 [[bin]]
 name = "express"
