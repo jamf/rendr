@@ -13,10 +13,9 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Setup mdBook
-        uses: peaceiris/actions-mdbook@v1
+        uses: ryankurte/action-mdbook@0.1.1
         with:
-          mdbook-version: '0.4.1'
-          # mdbook-version: 'latest'
+          inputDir: "docs"
 
       - run: mdbook build
 
@@ -24,4 +23,4 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./book
+          publish_dir: ./docs/book
