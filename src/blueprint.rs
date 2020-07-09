@@ -15,6 +15,7 @@ use serde_yaml;
 use walkdir::WalkDir;
 
 use crate::templating::TemplatingEngine;
+use crate::pattern::Pattern;
 
 type DynError = Box<dyn Error>;
 
@@ -110,7 +111,7 @@ impl Blueprint {
     fn is_excluded<P: AsRef<Path>>(&self, file: P) -> bool {
         self.metadata.exclusions
             .iter()
-            .find(|item| item.as_path() == file.as_ref())
+            .find(|pattern| pattern.matches_path(file.as_ref()))
             .is_some()
     }
 
@@ -319,7 +320,7 @@ struct BlueprintMetadata {
     description: String,
     values: Vec<ValueSpec>,
     #[serde(default)]
-    exclusions: Vec<PathBuf>,
+    exclusions: Vec<Pattern>,
 }
 
 #[derive(Deserialize)]

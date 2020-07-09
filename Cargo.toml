@@ -20,6 +20,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
 text_io = "0.1.8"
 walkdir = "2"
+glob = "0.3.0"
 
 [dev-dependencies]
 cargo-release = "0.13.0"
