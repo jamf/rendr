@@ -33,7 +33,8 @@ Parameter     | Description
 `values`      | A list of values that will be provided to the template rendering
 `exclusions`  | A list of glob patterns to exclude from rendering
 
-The structure of each value in `values` looks like this:
+There can be any number of items in the `values` list. The structure of each
+item looks like this:
 
 Parameter     | Description
 ---------     | -----------
@@ -41,3 +42,8 @@ Parameter     | Description
 `description` | The description of this value; becomes the interactive prompt text
 `required`    | Whether the value must be provided by the user (`true` or `false`)
 `default`     | The default value if one is not provided by the user
+
+The `required` field defaults to `false`, and can be omitted.
+
+The `default` field can also be omitted. If there is no default, the user will
+be prompted for this value (if not provided with the `-v` flag).

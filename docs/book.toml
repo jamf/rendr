@@ -1,6 +1,9 @@
 [book]
-authors = ["Tomasz Kurcz"]
+authors = ["Brian Stewart", "Tomasz Kurcz"]
 language = "en"
 multilingual = false
 src = "src"
 title = "rendr"
+
+[output.html]
+preferred-dark-theme = "coal"

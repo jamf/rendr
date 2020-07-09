@@ -1,5 +1,5 @@
 name: rendr
-about: A project scaffolding tool
+about: rendr: a project scaffolding tool
 settings:
   - ArgRequiredElseHelp
   - StrictUtf8
@@ -30,6 +30,6 @@ subcommands:
         - value:
             short: v
             long: value
-            help: Value(s) to render the blueprint with. Currently only supports strings.
+            help: Value(s) to render the blueprint with
             takes_value: true
             multiple: true
