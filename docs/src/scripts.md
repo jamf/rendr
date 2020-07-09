@@ -29,3 +29,7 @@ This script will print:
 
 Use the post-render script to customize files and directories, or to create
 remote repositories, CI/CD pipelines, etc.
+
+**NOTE:** The script must be executable to be run. Make it executable like this:
+
+    chmod +x scripts/post-render.sh
