@@ -15,7 +15,7 @@ use serde_yaml;
 use walkdir::WalkDir;
 
 use crate::templating::TemplatingEngine;
-use crate::pattern::Pattern;
+use crate::Pattern;
 
 type DynError = Box<dyn Error>;
 

@@ -3,6 +3,10 @@ use std::fmt;
 
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 
+/// A glob pattern for paths, meant to be directly deserialized into.
+/// 
+/// This is effectively a wrapper around patterns in the `glob` crate and follows
+/// [the same rules](glob::Pattern).
 pub struct Pattern(glob::Pattern);
 
 // Implementing Deref makes our Pattern wrapper almost a drop-in replacement
@@ -15,7 +19,7 @@ impl Deref for Pattern {
     }
 }
 
-// Enable deserialization.
+// Enable deserialization from a string.
 struct PatternVisitor;
 
 impl<'de> Visitor<'de> for PatternVisitor {
