@@ -6,9 +6,9 @@ use std::io::{self, Write};
 use clap::ArgMatches;
 use text_io::read;
 
-use express::templating;
-use express::blueprint::Blueprint;
-use express::blueprint::ValueSpec;
+use rendr::templating;
+use rendr::blueprint::Blueprint;
+use rendr::blueprint::ValueSpec;
 
 type DynError = Box<dyn Error>;
 

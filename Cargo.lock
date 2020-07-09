@@ -474,23 +474,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "express"
-version = "0.3.1-alpha.0"
-dependencies = [
- "cargo-release",
- "clap",
- "git2",
- "glob",
- "mustache",
- "openssl",
- "serde",
- "serde_yaml",
- "tempdir",
- "text_io",
- "walkdir",
-]
-
-[[package]]
 name = "failure"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1444,6 +1427,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3acd125665422973a33ac9d3dd2df85edad0f4ae9b00dafb1a05e43a9f5ef8e7"
 dependencies = [
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "rendr"
+version = "0.3.1-alpha.0"
+dependencies = [
+ "cargo-release",
+ "clap",
+ "git2",
+ "glob",
+ "mustache",
+ "openssl",
+ "serde",
+ "serde_yaml",
+ "tempdir",
+ "text_io",
+ "walkdir",
 ]
 
 [[package]]

@@ -133,7 +133,7 @@ impl Blueprint {
 
             if path.is_file() {
                 println!("Found file {:?}", &path);
-                
+
                 if self.is_excluded(&file.path_from_blueprint_root) {
                     fs::copy(path, output_path)?;
                 }
@@ -356,7 +356,7 @@ mod tests {
         assert_eq!(blueprint.metadata.name, "example-blueprint");
         assert_eq!(blueprint.metadata.version, 1);
         assert_eq!(blueprint.metadata.author, "Brian S. <brian.stewart@jamf.com>, Tomasz K. <tomasz.kurcz@jamf.com>");
-        assert_eq!(blueprint.metadata.description, "Just an example blueprint for `express`.");
+        assert_eq!(blueprint.metadata.description, "Just an example blueprint for `rendr`.");
     }
 
     #[test]

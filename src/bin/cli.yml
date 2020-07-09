@@ -1,4 +1,4 @@
-name: express
+name: rendr
 about: A project scaffolding tool
 settings:
   - ArgRequiredElseHelp

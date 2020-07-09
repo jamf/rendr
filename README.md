@@ -1,15 +1,15 @@
-# express
+# rendr
 
 _A project scaffolding tool_
 
-![MIT License](https://img.shields.io/github/license/jamf/express)
-![GitHub release](https://img.shields.io/github/v/release/jamf/express)
+![MIT License](https://img.shields.io/github/license/jamf/rendr)
+![GitHub release](https://img.shields.io/github/v/release/jamf/rendr)
 
-This project is currently under heavy development. The API is expected to change before reaching a 1.0.0 release. That said, it is functional and useful already! Try it out and provide any feedback you have by [opening an issue](https://github.com/jamf/express/issues).
+This project is currently under heavy development. The API is expected to change before reaching a 1.0.0 release. That said, it is functional and useful already! Try it out and provide any feedback you have by [opening an issue](https://github.com/jamf/rendr/issues).
 
 ## Features
 
-_Express_ is a scaffolding tool which allows generating entire projects (or anything else) from templates, using standard templating engines and simple customization via parameters. It is generic enough to apply to a wide variety of applications and tech stacks, but powerful and flexible enough to provide value, fast. The tool itself is really a generic template renderer. It's up to you, the template creator, to decide what to put in your template.
+_rendr_ is a scaffolding tool which allows generating entire projects (or anything else) from templates, using standard templating engines and simple customization via parameters. It is generic enough to apply to a wide variety of applications and tech stacks, but powerful and flexible enough to provide value, fast. The tool itself is really a generic template renderer. It's up to you, the template creator, to decide what to put in your template.
 
 ### Use cases
 
@@ -28,23 +28,23 @@ Templates consist of template files, scripts, and metadata. Full docs on the tem
 * Metadata is provided in a `metadata.yaml` file in the root of the template repo. It lists specific values that can be provided to the template, among other things.
 * Scripts live in a `scripts` directory in the template repo. This is the place to customize the generated files or automate followup actions (like creating a remote repository or pipeline).
 
-With these basic features, templates are already highly customizable! If you have other use cases that are not supported, feel free to let us know in the [issues](https://github.com/jamf/express/issues)!
+With these basic features, templates are already highly customizable! If you have other use cases that are not supported, feel free to let us know in the [issues](https://github.com/jamf/rendr/issues)!
 
 ## Usage
 
 Install the CLI via [Homebrew](https://brew.sh):
 ```sh
-brew install jamf/tap/express
+brew install jamf/tap/rendr
 ```
-Alternatively, download the CLI binary directly from the [Releases](https://github.com/jamf/express/releases) page and put it on your system path.
+Alternatively, download the CLI binary directly from the [Releases](https://github.com/jamf/rendr/releases) page and put it on your system path.
 
 View available commands:
 ```sh
-❯ express help
+❯ rendr help
 A project scaffolding tool
 
 USAGE:
-    express [SUBCOMMAND]
+    rendr [SUBCOMMAND]
 
 FLAGS:
     -h, --help       Prints help information
@@ -57,12 +57,12 @@ SUBCOMMANDS:
 
 The basic usage to generate a project looks like this:
 ```sh
-express init my-project --template https://github.com/your/template
+rendr init my-project --template https://github.com/your/template
 ```
 
 Provide values to the template with the `-v` flag:
 ```sh
-express init my-project -t https://github.com/your/template -v name:foo -v version:1.0.0
+rendr init my-project -t https://github.com/your/template -v name:foo -v version:1.0.0
 ```
 
 ## Development
