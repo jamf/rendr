@@ -5,6 +5,8 @@ _A project scaffolding tool_
 ![MIT License](https://img.shields.io/github/license/jamf/rendr)
 ![GitHub release](https://img.shields.io/github/v/release/jamf/rendr)
 
+Check out the [User Guide](https://jamf.github.io/rendr/) for the full documentation.
+
 This project is currently under heavy development. The API is expected to change before reaching a 1.0.0 release. That said, it is functional and useful already! Try it out and provide any feedback you have by [opening an issue](https://github.com/jamf/rendr/issues).
 
 ## Features
@@ -22,7 +24,7 @@ Here are just a few possible use cases:
 
 ### Template format
 
-Templates consist of template files, scripts, and metadata. Full docs on the template format are coming soon!
+Templates consist of template files, scripts, and metadata. See the [Metadata chapter](https://jamf.github.io/rendr/metadata.html) of the user guide for more details.
 
 * Template files live in the `blueprint` directory, and are rendered by the templating engine
 * Metadata is provided in a `metadata.yaml` file in the root of the template repo. It lists specific values that can be provided to the template, among other things.
@@ -31,6 +33,8 @@ Templates consist of template files, scripts, and metadata. Full docs on the tem
 With these basic features, templates are already highly customizable! If you have other use cases that are not supported, feel free to let us know in the [issues](https://github.com/jamf/rendr/issues)!
 
 ## Usage
+
+See the [Rendering Blueprints chapter](https://jamf.github.io/rendr/usage.html) of the user guide for more details.
 
 Install the CLI via [Homebrew](https://brew.sh):
 ```sh
