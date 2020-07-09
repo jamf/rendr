@@ -5,6 +5,7 @@ description: Just an example blueprint for `express`.
 exclusions:
 - "foo/non_existent_excluded_file"
 - "excluded_file"
+- "excluded_files/*"
 values:
 - name: name
   description: The name of your project

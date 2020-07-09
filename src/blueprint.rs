@@ -410,6 +410,23 @@ mod tests {
     }
 
     #[test]
+    fn glob_exclusions_work() {
+        let blueprint = Blueprint::new("test_assets/example_blueprint").unwrap();
+
+        let output_dir = TempDir::new("my-project").unwrap();
+
+        let mustache = Mustache::new();
+
+        blueprint.render(&mustache, &test_values(), output_dir.path()).unwrap();
+
+        let excluded_file1 = fs::read_to_string(output_dir.path().join("excluded_files/foo")).unwrap();
+        let excluded_file2 = fs::read_to_string(output_dir.path().join("excluded_files/bar")).unwrap();
+
+        assert!(excluded_file1.find("{{ name }}").is_some());
+        assert!(excluded_file2.find("{{ name }}").is_some());
+    }
+
+    #[test]
     fn script_can_be_run_successfully() {
         let script = Script::new("some script", PathBuf::from("test_assets/scripts/hello_world.sh"));
 
