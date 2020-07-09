@@ -56,7 +56,7 @@ the `-v` flag. This flag is repeated once for each value.
 rendr init foo -t https://github.com/your/template -v name:foo -v version:1.0.0
 ```
 
-## A note about scripts!
+## Important! A note about scripts
 
 Blueprints can contain scripts that execute as part of the rendering process.
 Blueprint creators can use this mechanism to provide custom functionality when
