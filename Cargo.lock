@@ -475,7 +475,7 @@ dependencies = [
 
 [[package]]
 name = "express"
-version = "0.3.0"
+version = "0.3.1-alpha.0"
 dependencies = [
  "cargo-release",
  "clap",
