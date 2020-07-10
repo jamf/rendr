@@ -5,7 +5,7 @@
 View the available commands with `rendr --help`:
 
     ❯ rendr --help
-    A project scaffolding tool
+    rendr: project scaffolding tool
 
     USAGE:
         rendr [SUBCOMMAND]
@@ -16,12 +16,12 @@ View the available commands with `rendr --help`:
 
     SUBCOMMANDS:
         help    Prints this message or the help of the given subcommand
-        init    Initializes a project from a template
+        init    Initializes a project from a blueprint
 
 To see usage for a subcommand, use `rendr [command] --help`:
 
     ❯ rendr init --help
-    Initializes a project from a template
+    Initializes a project from a blueprint
 
     USAGE:
         rendr init [OPTIONS] <name> --template <template>

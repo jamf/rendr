@@ -14,12 +14,12 @@ type DynError = Box<dyn Error>;
 
 pub fn init(args: &ArgMatches) -> Result<(), DynError> {
     // Parse CLI arguments.
-    let template = args.value_of("template").unwrap();
+    let blueprint_path = args.value_of("blueprint").unwrap();
     let name = args.value_of("name").unwrap();
     let output_dir = Path::new(args.value_of("dir").unwrap_or(name));
 
     // Attempt to read the provided blueprint.
-    let blueprint = Blueprint::new(template)?;
+    let blueprint = Blueprint::new(blueprint_path)?;
 
     println!("{}", blueprint);
     println!(

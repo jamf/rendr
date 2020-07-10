@@ -1,5 +1,5 @@
 name: rendr
-about: rendr: a project scaffolding tool
+about: "rendr: a project scaffolding tool"
 settings:
   - ArgRequiredElseHelp
   - StrictUtf8
@@ -10,13 +10,13 @@ args:
   #     help: Sets the level of verbosity
 subcommands:
   - init:
-      about: Initializes a project from a template
+      about: Initializes a project from a blueprint
       args:
-        - template:
-            short: t
-            long: template
+        - blueprint:
+            short: b
+            long: blueprint
             required: true
-            help: The URI of the template repo
+            help: The location of the blueprint (a git repo or a local directory)
             takes_value: true
         - name:
             required: true

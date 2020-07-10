@@ -2,7 +2,7 @@
 
 Each blueprint has a `metadata.yaml` file at its root level. This file defines
 things like the blueprint name, version and description, as well as values
-which the user can provide when rendering the template.
+which the user can provide when rendering the blueprint.
 
 Here is a simple example:
 

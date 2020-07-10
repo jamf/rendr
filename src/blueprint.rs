@@ -104,8 +104,8 @@ impl Blueprint {
     }
 
     fn files(&self) -> impl Iterator<Item=Result<File, walkdir::Error>> {
-        let blueprint_root = self.dir.path().join("blueprint");
-        Files::new(&blueprint_root)
+        let template_root = self.dir.path().join("template");
+        Files::new(&template_root)
     }
 
     fn is_excluded<P: AsRef<Path>>(&self, file: P) -> bool {
@@ -129,12 +129,12 @@ impl Blueprint {
         for file in self.files() {
             let file = file?;
             let path = file.path();
-            let output_path = output_dir.join(file.path_from_blueprint_root());
+            let output_path = output_dir.join(file.path_from_template_root());
 
             if path.is_file() {
                 println!("Found file {:?}", &path);
 
-                if self.is_excluded(&file.path_from_blueprint_root) {
+                if self.is_excluded(&file.path_from_template_root) {
                     fs::copy(path, output_path)?;
                 }
                 else {
@@ -160,14 +160,14 @@ impl Blueprint {
 
 pub struct Files {
     walkdir: walkdir::IntoIter,
-    blueprint_root: PathBuf,
+    template_root: PathBuf,
 }
 
 impl Files {
-    fn new(blueprint_root: &Path) -> Self {
+    fn new(template_root: &Path) -> Self {
         Files {
-            walkdir: WalkDir::new(blueprint_root).into_iter(),
-            blueprint_root: blueprint_root.to_path_buf(),
+            walkdir: WalkDir::new(template_root).into_iter(),
+            template_root: template_root.to_path_buf(),
         }
     }
 }
@@ -178,7 +178,7 @@ impl Iterator for Files {
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(next) = self.walkdir.next() {
             match next {
-                Ok(entry) => return Some(Ok(File::new(&self.blueprint_root, entry))),
+                Ok(entry) => return Some(Ok(File::new(&self.template_root, entry))),
                 Err(e)    => return Some(Err(e)),
             }
         }
@@ -189,13 +189,13 @@ impl Iterator for Files {
 
 pub struct File {
     dir_entry: DirEntry,
-    path_from_blueprint_root: PathBuf,
+    path_from_template_root: PathBuf,
 }
 
 impl File {
-    fn new<P: AsRef<Path>>(blueprint_root: P, dir_entry: DirEntry) -> Self {
-        let depth = blueprint_root.as_ref().components().count();
-        let path_from_blueprint_root = dir_entry
+    fn new<P: AsRef<Path>>(template_root: P, dir_entry: DirEntry) -> Self {
+        let depth = template_root.as_ref().components().count();
+        let path_from_template_root = dir_entry
             .path()
             .components()
             .skip(depth)
@@ -204,7 +204,7 @@ impl File {
 
         File {
             dir_entry,
-            path_from_blueprint_root: path_from_blueprint_root.to_path_buf(),
+            path_from_template_root: path_from_template_root.to_path_buf(),
         }
     }
 
@@ -212,8 +212,8 @@ impl File {
         self.dir_entry.path()
     }
 
-    fn path_from_blueprint_root(&self) -> &Path {
-        &self.path_from_blueprint_root
+    fn path_from_template_root(&self) -> &Path {
+        &self.path_from_template_root
     }
 }
 

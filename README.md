@@ -11,7 +11,7 @@ This project is currently under heavy development. The API is expected to change
 
 ## Features
 
-_rendr_ is a scaffolding tool which allows generating entire projects (or anything else) from templates, using standard templating engines and simple customization via parameters. It is generic enough to apply to a wide variety of applications and tech stacks, but powerful and flexible enough to provide value, fast. The tool itself is really a generic template renderer. It's up to you, the template creator, to decide what to put in your template.
+_rendr_ is a scaffolding tool which allows generating entire projects (or anything else) from blueprints, using standard templating engines and simple customization via parameters. It is generic enough to apply to a wide variety of applications and tech stacks, but powerful and flexible enough to provide value, fast. The tool itself is really a generic template renderer. It's up to you, the template creator, to decide what to put in your template.
 
 ### Use cases
 
@@ -22,15 +22,15 @@ Here are just a few possible use cases:
 * Include CI/CD standards baked into projects from the start, easily kept up to date
 * Simplify repeated patterns like creating new microservices, libraries, or submodules on an existing project
 
-### Template format
+### Blueprint format
 
-Templates consist of template files, scripts, and metadata. See the [Metadata chapter](https://jamf.github.io/rendr/metadata.html) of the user guide for more details.
+Blueprints consist of template files, scripts, and metadata. See the [Metadata chapter](https://jamf.github.io/rendr/metadata.html) of the user guide for more details.
 
-* Template files live in the `blueprint` directory, and are rendered by the templating engine
-* Metadata is provided in a `metadata.yaml` file in the root of the template repo. It lists specific values that can be provided to the template, among other things.
-* Scripts live in a `scripts` directory in the template repo. This is the place to customize the generated files or automate followup actions (like creating a remote repository or pipeline).
+* Template files live in the `template` directory, and are rendered by the templating engine
+* Metadata is provided in a `metadata.yaml` file in the root of the blueprint directory. It lists specific values that can be provided to the blueprint, among other things.
+* Scripts live in a `scripts` directory in the blueprint directory. This is the place to customize the generated files or automate followup actions (like creating a remote repository or pipeline).
 
-With these basic features, templates are already highly customizable! If you have other use cases that are not supported, feel free to let us know in the [issues](https://github.com/jamf/rendr/issues)!
+With these basic features, blueprints are already highly customizable! If you have other use cases that are not supported, feel free to let us know in the [issues](https://github.com/jamf/rendr/issues)!
 
 ## Usage
 
@@ -56,17 +56,17 @@ FLAGS:
 
 SUBCOMMANDS:
     help    Prints this message or the help of the given subcommand
-    init    Initializes a project from a template
+    init    Initializes a project from a blueprint
 ```
 
 The basic usage to generate a project looks like this:
 ```sh
-rendr init my-project --template https://github.com/your/template
+rendr init my-project --blueprint https://github.com/your/template
 ```
 
 Provide values to the template with the `-v` flag:
 ```sh
-rendr init my-project -t https://github.com/your/template -v name:foo -v version:1.0.0
+rendr init my-project -b https://github.com/your/template -v name:foo -v version:1.0.0
 ```
 
 ## Development
@@ -120,7 +120,7 @@ cargo run -- init -h
 
 Initialize a project from the [Go microservice blueprint](https://stash.jamf.build/projects/SCAF/repos/blueprint-go-microservice/browse).
 ```sh
-cargo run -- init --template https://stash.jamf.build/scm/scaf/blueprint-go-microservice.git my-project -v name:foo
+cargo run -- init --blueprint https://stash.jamf.build/scm/scaf/blueprint-go-microservice.git my-project -v name:foo
 ```
 
 ## Contributing
