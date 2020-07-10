@@ -1,6 +1,6 @@
 [package]
 name = "rendr"
-version = "0.3.1-alpha.0"
+version = "0.3.1"
 authors = ["Brian Stewart <brian.stewart@jamf.com>", "Tomasz Kurcz <tomasz.kurcz@jamf.com>"]
 description = "A project scaffolding tool"
 categories = ["command-line-utilities", "development-tools"]

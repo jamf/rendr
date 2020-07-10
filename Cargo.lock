@@ -1431,7 +1431,7 @@ dependencies = [
 
 [[package]]
 name = "rendr"
-version = "0.3.1-alpha.0"
+version = "0.3.1"
 dependencies = [
  "cargo-release",
  "clap",
