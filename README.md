@@ -34,7 +34,7 @@ brew install jamf/tap/rendr
 
 ### Cargo (from source)
 
-Again, latest release can be installed with:
+Again, the latest release can be installed with:
 ```sh
 cargo install rendr
 ```
