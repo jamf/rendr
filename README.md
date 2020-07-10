@@ -25,11 +25,23 @@ Here are just a few possible use cases:
 
 ## Installation
 
-Install the CLI via [Homebrew](https://brew.sh):
+### Homebrew
+
+To install the latest release:
 ```sh
 brew install jamf/tap/rendr
 ```
-Alternatively, download the CLI binary directly from the [Releases](https://github.com/jamf/rendr/releases) page and put it on your system path.
+
+### Cargo (from source)
+
+Again, latest release can be installed with:
+```sh
+cargo install rendr
+```
+
+### Binaries for Linux and macOS
+
+Alternatively, you can download the CLI binary directly from the [Releases](https://github.com/jamf/rendr/releases) page and put it on your system path.
 
 ## Usage
 
