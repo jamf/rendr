@@ -1,7 +1,7 @@
 # rendr
 
 _rendr_ is a scaffolding tool which allows generating entire projects (or
-anything else) from templates, using standard templating engines and simple
+anything else) from blueprints, using standard templating engines and simple
 customization via parameters. It is generic enough to apply to a wide variety
 of applications and tech stacks, but powerful and flexible enough to provide
 value, fast. The tool itself is really a generic template renderer. It's up to

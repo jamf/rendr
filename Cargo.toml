@@ -2,10 +2,16 @@
 name = "rendr"
 version = "0.3.1-alpha.0"
 authors = ["Brian Stewart <brian.stewart@jamf.com>", "Tomasz Kurcz <tomasz.kurcz@jamf.com>"]
+description = "A project scaffolding tool"
+categories = ["command-line-utilities", "development-tools"]
+keywords = ["cli", "templating", "project", "development"]
+homepage = "https://jamf.github.io/rendr/"
+repository = "https://github.com/jamf/rendr"
+readme = "README.md"
+license = "MIT"
 edition = "2018"
 build = "build.rs"
 autobins = false
-publish = false
 
 [[bin]]
 name = "rendr"
