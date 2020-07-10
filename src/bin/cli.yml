@@ -1,5 +1,5 @@
 name: rendr
-about: "rendr: a project scaffolding tool"
+about: A project scaffolding tool
 settings:
   - ArgRequiredElseHelp
   - StrictUtf8

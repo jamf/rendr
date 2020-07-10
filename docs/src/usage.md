@@ -5,7 +5,8 @@
 View the available commands with `rendr --help`:
 
     ❯ rendr --help
-    rendr: project scaffolding tool
+    rendr 0.3.1-alpha.0
+    A project scaffolding tool
 
     USAGE:
         rendr [SUBCOMMAND]
