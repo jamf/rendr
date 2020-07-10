@@ -22,19 +22,7 @@ Here are just a few possible use cases:
 * Include CI/CD standards baked into projects from the start, easily kept up to date
 * Simplify repeated patterns like creating new microservices, libraries, or submodules on an existing project
 
-### Blueprint format
-
-Blueprints consist of template files, scripts, and metadata. See the [Metadata chapter](https://jamf.github.io/rendr/metadata.html) of the user guide for more details.
-
-* Template files live in the `template` directory, and are rendered by the templating engine
-* Metadata is provided in a `metadata.yaml` file in the root of the blueprint directory. It lists specific values that can be provided to the blueprint, among other things.
-* Scripts live in a `scripts` directory in the blueprint directory. This is the place to customize the generated files or automate followup actions (like creating a remote repository or pipeline).
-
-With these basic features, blueprints are already highly customizable! If you have other use cases that are not supported, feel free to let us know in the [issues](https://github.com/jamf/rendr/issues)!
-
-## Usage
-
-See the [Rendering Blueprints chapter](https://jamf.github.io/rendr/usage.html) of the user guide for more details.
+## Installation
 
 Install the CLI via [Homebrew](https://brew.sh):
 ```sh
@@ -42,21 +30,13 @@ brew install jamf/tap/rendr
 ```
 Alternatively, download the CLI binary directly from the [Releases](https://github.com/jamf/rendr/releases) page and put it on your system path.
 
+## Usage
+
+More detailed usage can be found [in the User Guide](https://jamf.github.io/rendr/usage.html).
+
 View available commands:
 ```sh
 ❯ rendr help
-A project scaffolding tool
-
-USAGE:
-    rendr [SUBCOMMAND]
-
-FLAGS:
-    -h, --help       Prints help information
-    -V, --version    Prints version information
-
-SUBCOMMANDS:
-    help    Prints this message or the help of the given subcommand
-    init    Initializes a project from a blueprint
 ```
 
 The basic usage to generate a project looks like this:
@@ -67,60 +47,6 @@ rendr init my-project --blueprint https://github.com/your/template
 Provide values to the template with the `-v` flag:
 ```sh
 rendr init my-project -b https://github.com/your/template -v name:foo -v version:1.0.0
-```
-
-## Development
-
-You'll need Rust and Cargo. [You can get the whole toolchain here!](https://rustup.rs/)
-
-After checking out this repository, `cd` into the directory. You can use the standard Cargo commands. Below you'll find the most important ones.
-
-### Compile the whole project
-
-This should get you the usual dev build.
-```sh
-cargo build
-```
-
-This one is the same, but it produces an optimized release build. It takes more time.
-```sh
-cargo build --release
-```
-
-### Tests
-
-Run the unit tests and documentation tests.
-```sh
-cargo test
-```
-
-### Docs
-
-Build the reference manual and open it in your browser.
-```sh
-cargo doc --open
-```
-
-### Run the application
-
-Run the application.
-```sh
-cargo run
-```
-
-Get the helpfile.
-```sh
-cargo run -- -h
-```
-
-Get the helpfile for the `init` subcommand.
-```sh
-cargo run -- init -h
-```
-
-Initialize a project from the [Go microservice blueprint](https://stash.jamf.build/projects/SCAF/repos/blueprint-go-microservice/browse).
-```sh
-cargo run -- init --blueprint https://stash.jamf.build/scm/scaf/blueprint-go-microservice.git my-project -v name:foo
 ```
 
 ## Contributing
