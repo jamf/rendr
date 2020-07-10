@@ -2,9 +2,9 @@
 
 _A project scaffolding tool_
 
-![MIT License](https://img.shields.io/github/license/jamf/rendr)
-![GitHub release](https://img.shields.io/github/v/release/jamf/rendr)
-![User Guide](https://img.shields.io/badge/-docs-blue)
+[![MIT License](https://img.shields.io/github/license/jamf/rendr)](https://github.com/jamf/rendr/blob/master/LICENSE)
+[![GitHub release](https://img.shields.io/github/v/release/jamf/rendr)](https://github.com/jamf/rendr/releases)
+[![User Guide](https://img.shields.io/badge/-docs-blue)](https://jamf.github.io/rendr/)
 
 Check out the [User Guide](https://jamf.github.io/rendr/) for the full documentation.
 
