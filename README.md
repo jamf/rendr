@@ -4,6 +4,7 @@ _A project scaffolding tool_
 
 ![MIT License](https://img.shields.io/github/license/jamf/rendr)
 ![GitHub release](https://img.shields.io/github/v/release/jamf/rendr)
+![User Guide](https://img.shields.io/badge/-docs-blue)
 
 Check out the [User Guide](https://jamf.github.io/rendr/) for the full documentation.
 
