@@ -4,10 +4,6 @@ settings:
   - ArgRequiredElseHelp
   - StrictUtf8
 args:
-  # - verbose:
-  #     short: v
-  #     multiple: true
-  #     help: Sets the level of verbosity
 subcommands:
   - init:
       about: Initializes a project from a blueprint

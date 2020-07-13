@@ -4,19 +4,13 @@ use std::result::Result;
 use std::error::Error;
 
 use clap::{App, load_yaml, crate_version};
-use simplelog::{ConfigBuilder, LevelFilter, TermLogger, TerminalMode};
+use env_logger::{self, Env};
 use log::error;
 
 type DynError = Box<dyn Error>;
 
 fn main() {
-    let _logger = TermLogger::init(
-            LevelFilter::Info,
-            ConfigBuilder::new()
-                .set_time_level(LevelFilter::Off)
-                .build(),
-            TerminalMode::Mixed)
-        .expect("No interactive terminal.");
+    init_logger();
 
     if let Err(err) = run_app() {
         #[cfg(debug)]
@@ -26,7 +20,22 @@ fn main() {
         error!("{}", err);
 
         std::process::exit(1);
-    }
+    };
+}
+
+/// Initializes the logger. It'll be more verbose by default in dev builds and
+/// more "tidy" in releases. It can be customized via env variables.
+fn init_logger() {
+    #[cfg(debug)]
+    env_logger::from_env(Env::default().default_filter_or("debug"))
+        .format_timestamp(None)
+        .init();
+
+    #[cfg(not(debug))]
+    env_logger::from_env(Env::default().default_filter_or("info"))
+        .format_timestamp(None)
+        .format_module_path(false)
+        .init();
 }
 
 fn run_app() -> Result<(), DynError> {
