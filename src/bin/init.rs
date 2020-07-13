@@ -86,7 +86,7 @@ fn git_init(dir: &Path) -> Result<Oid, git2::Error> {
 
     let message = "Initial project generated with rendr";
     let tree = repo.find_tree(tree_id)?;
-    repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &[])?;
+    repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &[])
 }
 
 type ValueFromPrompt<'s> = (&'s str, String);
