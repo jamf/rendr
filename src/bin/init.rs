@@ -5,6 +5,7 @@ use std::io::{self, Write};
 
 use clap::ArgMatches;
 use text_io::read;
+use git2::{Commit, IndexAddOption, ObjectType, Oid, Repository};
 
 use rendr::templating;
 use rendr::blueprint::Blueprint;
@@ -55,7 +56,37 @@ pub fn init(args: &ArgMatches) -> Result<(), DynError> {
 
     blueprint.render(&mustache, &values, &output_dir)?;
 
+    if args.is_present("git-init") {
+        git_init(&output_dir)?;
+    }
+
     Ok(())
+}
+
+fn git_init(dir: &Path) -> Result<Oid, git2::Error> {
+    let repo = Repository::init(dir).expect("failed to initialize Git repository");
+
+    // First use the config to initialize a commit signature for the user
+    let sig = repo.signature()?;
+
+    // Now let's create an empty tree for this commit
+    let tree_id = {
+        let mut index = repo.index()?;
+        index.write_tree()?
+    };
+
+    let tree = repo.find_tree(tree_id)?;
+    repo.commit(Some("HEAD"), &sig, &sig, "Initial commit", &tree, &[])?;
+
+    let tree_id = {
+        let mut index = repo.index()?;
+        index.add_all(["."].iter(), IndexAddOption::DEFAULT, None)?;
+        index.write_tree()?
+    };
+
+    let message = "Initial project generated with rendr";
+    let tree = repo.find_tree(tree_id)?;
+    repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &[])?;
 }
 
 type ValueFromPrompt<'s> = (&'s str, String);
