@@ -869,6 +869,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "14b6052be84e6b71ab17edffc2eeabf5c2c3ae1fdb464aae35ac50c67a44e1f7"
 dependencies = [
  "cfg-if",
+ "serde",
 ]
 
 [[package]]
@@ -1437,10 +1438,12 @@ dependencies = [
  "clap",
  "git2",
  "glob",
+ "log 0.4.8",
  "mustache",
  "openssl",
  "serde",
  "serde_yaml",
+ "simplelog",
  "tempdir",
  "text_io",
  "walkdir",
@@ -1639,6 +1642,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "simplelog"
+version = "0.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3cf9a002ccce717d066b3ccdb8a28829436249867229291e91b25d99bd723f0d"
+dependencies = [
+ "chrono",
+ "log 0.4.8",
+ "term",
+]
+
+[[package]]
 name = "slab"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1747,6 +1761,16 @@ dependencies = [
  "rand 0.7.3",
  "redox_syscall",
  "remove_dir_all",
+ "winapi 0.3.9",
+]
+
+[[package]]
+name = "term"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c0863a3345e70f61d613eab32ee046ccd1bcc5f9105fe402c61fcd0c13eeb8b5"
+dependencies = [
+ "dirs",
  "winapi 0.3.9",
 ]
 

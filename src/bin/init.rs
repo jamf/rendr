@@ -5,6 +5,7 @@ use std::io::{self, Write};
 
 use clap::ArgMatches;
 use text_io::read;
+use log::info;
 
 use rendr::templating;
 use rendr::blueprint::Blueprint;
@@ -22,7 +23,7 @@ pub fn init(args: &ArgMatches) -> Result<(), DynError> {
     let blueprint = Blueprint::new(blueprint_path)?;
 
     println!("{}", blueprint);
-    println!(
+    info!(
         "Output directory: {}",
         output_dir.to_str()
             .expect("Invalid utf8 in output_dir. This panic shouldn't happen!"),

@@ -13,6 +13,7 @@ use git2::Repository;
 use serde::Deserialize;
 use serde_yaml;
 use walkdir::WalkDir;
+use log::{info, debug};
 
 use crate::templating::TemplatingEngine;
 use crate::Pattern;
@@ -80,8 +81,7 @@ impl Blueprint {
         script_path.push(format!("{}.sh", script));
 
         if !script_path.exists() {
-            #[cfg(debug)]
-            eprintln!("No {} script found in blueprint scripts directory - skipping", script);
+            debug!("No {} script found in blueprint scripts directory - skipping", script);
             return Ok(None);
         }
 
@@ -132,7 +132,7 @@ impl Blueprint {
             let output_path = output_dir.join(file.path_from_template_root());
 
             if path.is_file() {
-                println!("Found file {:?}", &path);
+                info!("Found file {:?}", &path);
 
                 if self.is_excluded(&file.path_from_template_root) {
                     fs::copy(path, output_path)?;
@@ -231,11 +231,11 @@ impl Script {
     }
 
     fn run(&self, working_dir: &Path, values: &HashMap<&str, &str>) -> Result<(), DynError> {
-        println!("Running blueprint script: {}", &self.name);
+        info!("Running blueprint script: {}", &self.name);
 
         #[cfg(debug)]
-        println!("  Blueprint script full path: {:?}", &self.path);
-        println!("  Blueprint script working dir: {:?}", working_dir);
+        debug!("  Blueprint script full path: {:?}", &self.path);
+        debug!("  Blueprint script working dir: {:?}", working_dir);
 
         let output = Command::new("sh")
             .arg("-c")
@@ -247,7 +247,7 @@ impl Script {
             .output()
             .expect("failed to execute script");
 
-        println!("Status: {}", output.status);
+        debug!("Status: {}", output.status);
 
         if !output.status.success() {
             let e = ScriptError::new(output.status.code(), String::from_utf8(output.stderr)?);

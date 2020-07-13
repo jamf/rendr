@@ -4,16 +4,26 @@ use std::result::Result;
 use std::error::Error;
 
 use clap::{App, load_yaml, crate_version};
+use simplelog::{ConfigBuilder, LevelFilter, TermLogger, TerminalMode};
+use log::error;
 
 type DynError = Box<dyn Error>;
 
 fn main() {
+    let _logger = TermLogger::init(
+            LevelFilter::Info,
+            ConfigBuilder::new()
+                .set_time_level(LevelFilter::Off)
+                .build(),
+            TerminalMode::Mixed)
+        .expect("No interactive terminal.");
+
     if let Err(err) = run_app() {
         #[cfg(debug)]
-        eprintln!("Error: {:?}", err);
+        error!("{:?}", err);
 
         #[cfg(not(debug))]
-        eprintln!("Error: {}", err);
+        error!("{}", err);
 
         std::process::exit(1);
     }
