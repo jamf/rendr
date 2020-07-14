@@ -122,6 +122,7 @@ impl Blueprint {
             output_dir: &Path,
     ) -> Result<(), DynError> {
         // Create our output directory if it doesn't exist yet.
+        debug!("Creating root project dir {:?}", &output_dir);
         if !output_dir.is_dir() {
             fs::create_dir(output_dir)?;
         }
@@ -132,12 +133,14 @@ impl Blueprint {
             let output_path = output_dir.join(file.path_from_template_root());
 
             if path.is_file() {
-                info!("Found file {:?}", &path);
+                debug!("Found file {:?}", &path);
 
                 if self.is_excluded(&file.path_from_template_root) {
+                    debug!("Copying {:?} to {:?} without templating.", &path, &output_path);
                     fs::copy(path, output_path)?;
                 }
                 else {
+                    debug!("Using template {:?} to render {:?}", &path, &output_path);
                     let contents = fs::read_to_string(&path)?;
                     let contents = engine.render_template(&contents, &values)?;
                     fs::write(output_path, &contents)?;
@@ -145,6 +148,7 @@ impl Blueprint {
             }
             else if path.is_dir() {
                 if !output_path.is_dir() {
+                    debug!("Creating directory {:?}", &output_path);
                     fs::create_dir(&output_path)?;
                 }
             }
