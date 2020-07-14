@@ -24,7 +24,12 @@ fn main() {
 }
 
 /// Initializes the logger. It'll be more verbose by default in dev builds and
-/// more "tidy" in releases. It can be customized via env variables.
+/// more "tidy" in releases. It can be customized via env variables. Mostly
+/// this means setting RUST_LOG to one of:
+/// "OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"
+/// 
+/// More fine-grained options can be found here:
+/// https://docs.rs/env_logger
 fn init_logger() {
     #[cfg(debug)]
     env_logger::from_env(Env::default().default_filter_or("debug"))
