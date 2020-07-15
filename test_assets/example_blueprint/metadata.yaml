@@ -6,6 +6,7 @@ exclusions:
 - "foo/non_existent_excluded_file"
 - "excluded_file"
 - "excluded_files/*"
+git-init: true
 values:
 - name: name
   description: The name of your project

@@ -5,7 +5,7 @@ use std::path::Path;
 
 use clap::ArgMatches;
 use git2::{Oid, Repository, IndexAddOption};
-use log::info;
+use log::{info, debug};
 use text_io::read;
 
 use rendr::templating;
@@ -53,11 +53,13 @@ pub fn init(args: &ArgMatches) -> Result<(), DynError> {
     let mustache = templating::Mustache::new();
 
     blueprint.render(&mustache, &values, &output_dir)?;
-    info!("Success. Enjoy!");
 
-    if args.is_present("git-init") {
+    if args.is_present("git-init") || (blueprint.is_git_init_enabled() && !args.is_present("no-git-init")) {
+        debug!("Initializing Git repository");
         git_init(&output_dir)?;
     }
+
+    info!("Success. Enjoy!");
 
     Ok(())
 }

@@ -88,6 +88,10 @@ impl Blueprint {
         Ok(Some(Script::new(script, script_path)))
     }
 
+    pub fn is_git_init_enabled(&self) -> bool {
+        self.metadata.git_init
+    }
+
     pub fn values(&self) -> impl Iterator<Item=&ValueSpec> {
         self.metadata.values.iter()
     }
@@ -325,6 +329,9 @@ struct BlueprintMetadata {
     values: Vec<ValueSpec>,
     #[serde(default)]
     exclusions: Vec<Pattern>,
+    #[serde(alias = "git-init")]
+    #[serde(default)]
+    git_init: bool,
 }
 
 #[derive(Deserialize)]

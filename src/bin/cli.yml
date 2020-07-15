@@ -31,5 +31,9 @@ subcommands:
             multiple: true
         - git-init:
             long: git-init
-            help: Initialize Git repository in rendered project
+            help: Initializes a Git repository in the rendered project
+            takes_value: false
+        - no-git-init:
+            long: no-git-init
+            help: Skips initializing Git repository in the rendered project
             takes_value: false
