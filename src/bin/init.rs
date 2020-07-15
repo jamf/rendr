@@ -1,12 +1,12 @@
-use std::error::Error;
 use std::collections::HashMap;
-use std::path::Path;
+use std::error::Error;
 use std::io::{self, Write};
+use std::path::Path;
 
 use clap::ArgMatches;
-use text_io::read;
 use git2::{Oid, Repository, IndexAddOption};
 use log::info;
+use text_io::read;
 
 use rendr::templating;
 use rendr::blueprint::Blueprint;
