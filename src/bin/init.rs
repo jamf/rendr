@@ -122,16 +122,27 @@ fn git_init_works() -> Result<(), Box<dyn Error>>{
 
     let repo = Repository::open(dir.path())?;
 
+    // General "Is the repo in the expected and sane state?" tests
     assert!(!repo.is_empty()?, "the repository was empty");
     assert_eq!(RepositoryState::Clean, repo.state(), "the repository wasn't in a clean state");
     assert!(!repo.head_detached()?, "the repository head was detached");
     assert_eq!(0, repo.index()?.iter().count());
     repo.head()?;
-    let commit_count = repo.revwalk()?.count();
-    assert_eq!(1, commit_count, "the repository had {} commits instead of exactly one", commit_count);
     assert!(dir.path().join("foo").exists());
 
-    // TODO: inspect the commit and make sure it includes `foo`
+    // Verify a single commit was added with the foo file included
+    let commit_count = repo.revwalk()?.count();
+    assert_eq!(1, commit_count, "the repository had {} commits instead of exactly one", commit_count);
+
+    let commit = repo.find_commit(
+        repo.revwalk()?.next().unwrap().unwrap()
+    )?;
+    
+    let tree = commit.tree()?;
+    assert!(tree.is_empty());
+    
+    let foo = tree.get_name("foo");
+    assert!(foo.is_some());
 
     Ok(())
 }
