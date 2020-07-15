@@ -2,6 +2,7 @@ mod init;
 
 use std::result::Result;
 use std::error::Error;
+use std::env;
 
 use clap::{App, load_yaml, crate_version};
 use env_logger::{self, Env};
@@ -23,6 +24,8 @@ fn main() {
     };
 }
 
+const LOG_LEVEL_ENV_VAR: &str = "RENDR_LOG";
+
 /// Initializes the logger. It'll be more verbose by default in dev builds and
 /// more "tidy" in releases. It can be customized via env variables. Mostly
 /// this means setting RENDR_LOG to one of:
@@ -32,15 +35,24 @@ fn main() {
 /// https://docs.rs/env_logger
 fn init_logger() {
     #[cfg(debug)]
-    env_logger::from_env(Env::default().filter_or("RENDR_LOG", "debug"))
+    env_logger::from_env(Env::default().filter_or(LOG_LEVEL_ENV_VAR, "debug"))
         .format_timestamp(None)
         .init();
 
     #[cfg(not(debug))]
-    env_logger::from_env(Env::default().filter_or("RENDR_LOG", "info"))
-        .format_timestamp(None)
-        .format_module_path(false)
-        .init();
+    {
+        let mut logger_builder = env_logger::from_env(Env::default().filter_or(LOG_LEVEL_ENV_VAR, "info"));
+
+        // Turn off the prefix completely unless the logging level env var
+        // is explicitly specified.
+        if let Err(_) = env::var(LOG_LEVEL_ENV_VAR) {
+            logger_builder.format_level(false);
+        }
+
+        logger_builder.format_timestamp(None)
+            .format_module_path(false)
+            .init();
+    }
 }
 
 fn run_app() -> Result<(), DynError> {
