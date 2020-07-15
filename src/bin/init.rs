@@ -69,15 +69,6 @@ fn git_init(dir: &Path) -> Result<Oid, git2::Error> {
     // First use the config to initialize a commit signature for the user
     let sig = repo.signature()?;
 
-    // Now let's create an empty tree for this commit
-    let tree_id = {
-        let mut index = repo.index()?;
-        index.write_tree()?
-    };
-
-    let tree = repo.find_tree(tree_id)?;
-    repo.commit(Some("HEAD"), &sig, &sig, "Initial commit", &tree, &[])?;
-
     let tree_id = {
         let mut index = repo.index()?;
         index.add_all(["."].iter(), IndexAddOption::DEFAULT, None)?;
@@ -117,4 +108,30 @@ fn correct_values_are_parsed_correctly() {
 
     assert_eq!(foo, "foo");
     assert_eq!(bar, "bar");
+}
+
+#[test]
+fn git_init_works() -> Result<(), Box<dyn Error>>{
+    use tempdir::TempDir;
+    use git2::RepositoryState;
+
+    let dir = TempDir::new("my-project").unwrap();
+    std::fs::write(dir.path().join("foo"), "foo")?;
+
+    git_init(dir.path())?;
+
+    let repo = Repository::open(dir.path())?;
+
+    assert!(!repo.is_empty()?, "the repository was empty");
+    assert_eq!(RepositoryState::Clean, repo.state(), "the repository wasn't in a clean state");
+    assert!(!repo.head_detached()?, "the repository head was detached");
+    assert_eq!(0, repo.index()?.iter().count());
+    repo.head()?;
+    let commit_count = repo.revwalk()?.count();
+    assert_eq!(1, commit_count, "the repository had {} commits instead of exactly one", commit_count);
+    assert!(dir.path().join("foo").exists());
+
+    // TODO: inspect the commit and make sure it includes `foo`
+
+    Ok(())
 }
