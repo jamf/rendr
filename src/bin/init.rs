@@ -6,6 +6,7 @@ use std::io::{self, Write};
 use clap::ArgMatches;
 use text_io::read;
 use git2::{Oid, Repository, IndexAddOption};
+use log::info;
 
 use rendr::templating;
 use rendr::blueprint::Blueprint;
@@ -23,11 +24,6 @@ pub fn init(args: &ArgMatches) -> Result<(), DynError> {
     let blueprint = Blueprint::new(blueprint_path)?;
 
     println!("{}", blueprint);
-    println!(
-        "Output directory: {}",
-        output_dir.to_str()
-            .expect("Invalid utf8 in output_dir. This panic shouldn't happen!"),
-    );
 
     // Time to parse values. Let's start by collecting the defaults.
     let mut values: HashMap<&str, &str> = blueprint.default_values()
@@ -52,9 +48,12 @@ pub fn init(args: &ArgMatches) -> Result<(), DynError> {
         .collect();
     values.extend(prompt_values);
 
+    info!("Output directory: {:?}. Creating your new scaffold...", &output_dir);
+
     let mustache = templating::Mustache::new();
 
     blueprint.render(&mustache, &values, &output_dir)?;
+    info!("Success. Enjoy!");
 
     if args.is_present("git-init") {
         git_init(&output_dir)?;
