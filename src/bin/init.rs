@@ -5,7 +5,7 @@ use std::io::{self, Write};
 
 use clap::ArgMatches;
 use text_io::read;
-use git2::{Commit, IndexAddOption, ObjectType, Oid, Repository};
+use git2::{Oid, Repository, IndexAddOption};
 
 use rendr::templating;
 use rendr::blueprint::Blueprint;
@@ -72,6 +72,7 @@ fn git_init(dir: &Path) -> Result<Oid, git2::Error> {
     let tree_id = {
         let mut index = repo.index()?;
         index.add_all(["."].iter(), IndexAddOption::DEFAULT, None)?;
+        index.write()?;
         index.write_tree()?
     };
 
@@ -126,7 +127,6 @@ fn git_init_works() -> Result<(), Box<dyn Error>>{
     assert!(!repo.is_empty()?, "the repository was empty");
     assert_eq!(RepositoryState::Clean, repo.state(), "the repository wasn't in a clean state");
     assert!(!repo.head_detached()?, "the repository head was detached");
-    assert_eq!(0, repo.index()?.iter().count());
     repo.head()?;
     assert!(dir.path().join("foo").exists());
 
