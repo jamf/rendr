@@ -4,7 +4,7 @@ use std::io::{self, Write};
 use std::path::Path;
 
 use clap::ArgMatches;
-use git2::{Oid, Repository, IndexAddOption};
+use git2::{Oid, Repository, IndexAddOption, Signature};
 use log::{info, debug};
 use text_io::read;
 
@@ -68,7 +68,10 @@ fn git_init(dir: &Path) -> Result<Oid, git2::Error> {
     let repo = Repository::init(dir).expect("failed to initialize Git repository");
 
     // First use the config to initialize a commit signature for the user
-    let sig = repo.signature()?;
+    let sig = match repo.signature() {
+        Ok(signature) => signature,
+        Err(_) => Signature::now("rendr", "rendr@github.com")?,
+    };
 
     let tree_id = {
         let mut index = repo.index()?;
