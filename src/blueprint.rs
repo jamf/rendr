@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::env::current_dir;
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -36,13 +35,12 @@ impl Blueprint {
 
         if path.exists() {
             blueprint = Self::from_dir(path)?;
-            blueprint.source = Path::new("..").join(Self::normalize_source_path(&path, &current_dir()?)).to_str().unwrap().to_string();
         }
         else {
             blueprint = Self::from_repo(source)?;
-            blueprint.source = source.to_owned();
         }
 
+        blueprint.source = source.to_owned();
         blueprint.find_scripts()?;
 
         Ok(blueprint)
@@ -75,9 +73,10 @@ impl Blueprint {
         })
     }
 
-    fn normalize_source_path(path: &Path, working_dir: &Path) -> String {
+    fn normalize_source_path(path: &Path, rendr_file: &Path) -> String {
+        debug!("Normalizing {} to {}", path.display(), rendr_file.display());
         match path.is_absolute() {
-            true => diff_paths(path, working_dir).unwrap().display().to_string(),
+            true  => diff_paths(path, rendr_file).unwrap().display().to_string(),
             false => path.display().to_string(),
         }
     }
@@ -176,14 +175,25 @@ impl Blueprint {
             post_script.run(output_dir, values)?;
         }
 
-        self.generate_rendr_file(&output_dir, &values)?;
+        let source_path = Path::new(&self.source);
+        debug!("Source path: {}; exists: {}", source_path.display(), source_path.exists());
+        let source = match source_path.exists() {
+            true  => Self::normalize_source_path(&source_path, &output_dir.join(Path::new(".rendr.yaml"))),
+            false => self.source.clone(),
+        };
+
+        debug!("Generating .rendr.yaml file:");
+        debug!("  source: {}", source);
+        debug!("  output_dir: {}", output_dir.display());
+        debug!("  values: {:?}", values);
+        self.generate_rendr_file(&source, &output_dir, &values)?;
 
         Ok(())
     }
 
-    fn generate_rendr_file(&self, output_dir: &Path, values: &HashMap<&str, &str>) -> Result<(), DynError> {
+    fn generate_rendr_file(&self, source: &str, output_dir: &Path, values: &HashMap<&str, &str>) -> Result<(), DynError> {
         let path = output_dir.join(Path::new(".rendr.yaml"));
-        let config = RendrConfig::new(self.source.clone(), &self.metadata, values);
+        let config = RendrConfig::new(source.to_string().clone(), &self.metadata, values);
         let yaml = serde_yaml::to_string(&config)?;
         let mut file = std::fs::File::create(path)?;
 
@@ -538,11 +548,22 @@ mod tests {
     }
 
     #[test]
-    fn normalize_source_path_returns_relative_path() {
+    fn normalize_absolute_source_path_returns_relative_path() {
         let blueprint_dir = Path::new("/Users/rendr/blueprints/my-app-blueprint");
-        let working_dir = Path::new("/Users/rendr/code");
+        let rendr_file = Path::new("/Users/rendr/code/foo/.rendr.yaml");
 
-        let relative_path = Blueprint::normalize_source_path(&blueprint_dir, &working_dir);
+        let relative_path = Blueprint::normalize_source_path(&blueprint_dir, &rendr_file);
+
+        assert_eq!(relative_path, "../blueprints/my-app-blueprint");
+    }
+
+    #[test]
+    fn normalize_relative_source_path_returns_relative_path() {
+        let working_dir = Path::new("/Users/rendr/code");
+        let blueprint_dir = Path::new("blueprints/my-app-blueprint");
+        let rendr_file = Path::new("/Users/rendr/code/foo/.rendr.yaml");
+
+        let relative_path = Blueprint::normalize_source_path(&blueprint_dir, &rendr_file);
 
         assert_eq!(relative_path, "../blueprints/my-app-blueprint");
     }
