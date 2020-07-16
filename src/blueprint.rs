@@ -165,12 +165,14 @@ impl Blueprint {
             post_script.run(output_dir, values)?;
         }
 
+        self.generate_rendr_file(&output_dir, &values)?;
+
         Ok(())
     }
 
     fn generate_rendr_file(&self, output_dir: &Path, values: &HashMap<&str, &str>) -> Result<(), DynError> {
         let path = output_dir.join(Path::new(".rendr.yaml"));
-        let config = RendrConfig::new(self.source, &self.metadata, values);
+        let config = RendrConfig::new(self.source.clone(), &self.metadata, values);
         let yaml = serde_yaml::to_string(&config)?;
         let mut file = std::fs::File::create(path)?;
 
@@ -210,10 +212,10 @@ impl RendrConfig {
         let values = values.iter().map(|(k, v)| RendrConfigValue::new(String::from(*k), String::from(*v))).collect();
 
         RendrConfig {
-            name: metadata.name,
+            name: metadata.name.clone(),
             version: metadata.version,
-            author: metadata.author,
-            description: metadata.description,
+            author: metadata.author.clone(),
+            description: metadata.description.clone(),
             source: source,
             values: values,
         }
