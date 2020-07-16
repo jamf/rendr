@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::env::current_dir;
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -14,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use serde_yaml;
 use tempdir::TempDir;
 use walkdir::{DirEntry, WalkDir};
+use pathdiff::diff_paths;
 
 use crate::Pattern;
 use crate::templating::TemplatingEngine;
@@ -28,18 +30,20 @@ pub struct Blueprint {
 }
 
 impl Blueprint {
-    pub fn new(path: &str) -> Result<Blueprint, DynError> {
+    pub fn new(source: &str) -> Result<Blueprint, DynError> {
         let mut blueprint;
+        let path = Path::new(source);
 
-        if Path::new(path).exists() {
+        if path.exists() {
             blueprint = Self::from_dir(path)?;
+            blueprint.source = Path::new("..").join(Self::normalize_source_path(&path, &current_dir()?)).to_str().unwrap().to_string();
         }
         else {
-            blueprint = Self::from_repo(path)?;
+            blueprint = Self::from_repo(source)?;
+            blueprint.source = source.to_owned();
         }
 
         blueprint.find_scripts()?;
-        blueprint.source = path.to_owned();
 
         Ok(blueprint)
     }
@@ -52,8 +56,8 @@ impl Blueprint {
         Self::from_blueprint_dir(BlueprintDir::TempDir(dir))
     }
 
-    fn from_dir(path: &str) -> Result<Blueprint, DynError> {
-        let path = Path::new(path).to_path_buf();
+    fn from_dir(path: &Path) -> Result<Blueprint, DynError> {
+        let path = path.to_path_buf();
 
         Self::from_blueprint_dir(BlueprintDir::Path(path))
     }
@@ -69,6 +73,13 @@ impl Blueprint {
             post_script: None,
             source: "".to_owned(),
         })
+    }
+
+    fn normalize_source_path(path: &Path, working_dir: &Path) -> String {
+        match path.is_absolute() {
+            true => diff_paths(path, working_dir).unwrap().display().to_string(),
+            false => path.display().to_string(),
+        }
     }
 
     fn find_scripts(&mut self) -> Result<(), DynError> {
@@ -524,6 +535,16 @@ mod tests {
         let script_output = fs::read_to_string(output_dir.path().join("script_output.md")).unwrap();
 
         assert_eq!(script_output.as_str(), "something123");
+    }
+
+    #[test]
+    fn normalize_source_path_returns_relative_path() {
+        let blueprint_dir = Path::new("/Users/rendr/blueprints/my-app-blueprint");
+        let working_dir = Path::new("/Users/rendr/code");
+
+        let relative_path = Blueprint::normalize_source_path(&blueprint_dir, &working_dir);
+
+        assert_eq!(relative_path, "../blueprints/my-app-blueprint");
     }
 
     // Test helpers
