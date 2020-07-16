@@ -1,11 +1,12 @@
-use std::error::Error;
 use std::collections::HashMap;
-use std::path::Path;
+use std::error::Error;
 use std::io::{self, Write};
+use std::path::Path;
 
 use clap::ArgMatches;
+use git2::{Oid, Repository, IndexAddOption, Signature};
+use log::{info, debug};
 use text_io::read;
-use log::info;
 
 use rendr::templating;
 use rendr::blueprint::Blueprint;
@@ -52,9 +53,36 @@ pub fn init(args: &ArgMatches) -> Result<(), DynError> {
     let mustache = templating::Mustache::new();
 
     blueprint.render(&mustache, &values, &output_dir)?;
+
+    if args.is_present("git-init") || (blueprint.is_git_init_enabled() && !args.is_present("no-git-init")) {
+        debug!("Initializing Git repository");
+        git_init(&output_dir)?;
+    }
+
     info!("Success. Enjoy!");
 
     Ok(())
+}
+
+fn git_init(dir: &Path) -> Result<Oid, git2::Error> {
+    let repo = Repository::init(dir).expect("failed to initialize Git repository");
+
+    // First use the config to initialize a commit signature for the user
+    let sig = match repo.signature() {
+        Ok(signature) => signature,
+        Err(_) => Signature::now("rendr", "rendr@github.com")?,
+    };
+
+    let tree_id = {
+        let mut index = repo.index()?;
+        index.add_all(["."].iter(), IndexAddOption::DEFAULT, None)?;
+        index.write()?;
+        index.write_tree()?
+    };
+
+    let message = "Initial project generated with rendr";
+    let tree = repo.find_tree(tree_id)?;
+    repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &[])
 }
 
 type ValueFromPrompt<'s> = (&'s str, String);
@@ -85,4 +113,28 @@ fn correct_values_are_parsed_correctly() {
 
     assert_eq!(foo, "foo");
     assert_eq!(bar, "bar");
+}
+
+#[test]
+fn git_init_works() -> Result<(), Box<dyn Error>>{
+    use tempdir::TempDir;
+    use git2::RepositoryState;
+
+    let dir = TempDir::new("my-project").unwrap();
+    std::fs::write(dir.path().join("foo"), "foo")?;
+
+    git_init(dir.path())?;
+
+    let repo = Repository::open(dir.path())?;
+
+    // General "Is the repo in the expected and sane state?" tests
+    assert!(!repo.is_empty()?, "the repository was empty");
+    assert_eq!(RepositoryState::Clean, repo.state(), "the repository wasn't in a clean state");
+    assert!(!repo.head_detached()?, "the repository head was detached");
+    repo.head()?;
+    assert!(dir.path().join("foo").exists());
+
+    assert!(dir.path().join(".git/index").exists(), "the git index file doesn't exist");
+
+    Ok(())
 }

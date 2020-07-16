@@ -29,3 +29,11 @@ subcommands:
             help: Value(s) to render the blueprint with
             takes_value: true
             multiple: true
+        - git-init:
+            long: git-init
+            help: Initializes a Git repository in the rendered project
+            takes_value: false
+        - no-git-init:
+            long: no-git-init
+            help: Skips initializing Git repository in the rendered project
+            takes_value: false
