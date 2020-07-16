@@ -1,22 +1,22 @@
-use walkdir::DirEntry;
+use std::collections::HashMap;
+use std::error::Error;
 use std::fmt::Display;
 use std::fmt::Formatter;
-use std::collections::HashMap;
+use std::fs;
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::error::Error;
-use std::fs;
 
-use tempdir::TempDir;
 use git2::Repository;
-use serde::Deserialize;
-use serde_yaml;
-use walkdir::WalkDir;
 use log::{info, debug};
+use serde::{Deserialize, Serialize};
+use serde_yaml;
+use tempdir::TempDir;
+use walkdir::{DirEntry, WalkDir};
 
-use crate::templating::TemplatingEngine;
 use crate::Pattern;
+use crate::templating::TemplatingEngine;
 
 type DynError = Box<dyn Error>;
 
@@ -24,6 +24,7 @@ pub struct Blueprint {
     metadata: BlueprintMetadata,
     dir: BlueprintDir,
     post_script: Option<Script>,
+    source: String,
 }
 
 impl Blueprint {
@@ -38,6 +39,7 @@ impl Blueprint {
         }
 
         blueprint.find_scripts()?;
+        blueprint.source = path.to_owned();
 
         Ok(blueprint)
     }
@@ -65,6 +67,7 @@ impl Blueprint {
             metadata,
             dir,
             post_script: None,
+            source: "".to_owned(),
         })
     }
 
@@ -163,6 +166,57 @@ impl Blueprint {
         }
 
         Ok(())
+    }
+
+    fn generate_rendr_file(&self, output_dir: &Path, values: &HashMap<&str, &str>) -> Result<(), DynError> {
+        let path = output_dir.join(Path::new(".rendr.yaml"));
+        let config = RendrConfig::new(self.source, &self.metadata, values);
+        let yaml = serde_yaml::to_string(&config)?;
+        let mut file = std::fs::File::create(path)?;
+
+        file.write_all(yaml.as_bytes())?;
+
+        Ok(())
+    }
+}
+
+#[derive(Serialize)]
+struct RendrConfig {
+    name: String,
+    version: u32,
+    author: String,
+    description: String,
+    source: String,
+    values: Vec<RendrConfigValue>,
+}
+
+#[derive(Serialize)]
+struct RendrConfigValue {
+    name: String,
+    value: String,
+}
+
+impl RendrConfigValue {
+    fn new(name: String, value: String) -> Self {
+        RendrConfigValue {
+            name,
+            value,
+        }
+    }
+}
+
+impl RendrConfig {
+    fn new(source: String, metadata: &BlueprintMetadata, values: &HashMap<&str, &str>) -> Self {
+        let values = values.iter().map(|(k, v)| RendrConfigValue::new(String::from(*k), String::from(*v))).collect();
+
+        RendrConfig {
+            name: metadata.name,
+            version: metadata.version,
+            author: metadata.author,
+            description: metadata.description,
+            source: source,
+            values: values,
+        }
     }
 }
 
