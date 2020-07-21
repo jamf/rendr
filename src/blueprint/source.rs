@@ -45,9 +45,22 @@ impl Source {
             Local(path)    => &path,
         }
     }
+
+    pub fn to_string(&self, from: impl AsRef<Path>) -> String {
+        use Source::*;
+
+        match self {
+            Local(path) => pathdiff::diff_paths(path, from)
+                                .unwrap()
+                                .to_str()
+                                .unwrap()
+                                .to_owned(),
+            Remote(src) => src.url().to_string(),
+        }
+    }
 }
 
-struct RemoteSource {
+pub struct RemoteSource {
     url: String,
     checked_out: TempDir,
 }
@@ -55,5 +68,9 @@ struct RemoteSource {
 impl RemoteSource {
     fn path(&self) -> &Path {
         self.checked_out.path()
+    }
+
+    fn url(&self) -> &str {
+        &self.url
     }
 }

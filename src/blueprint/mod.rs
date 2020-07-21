@@ -13,9 +13,7 @@ use std::process::{Command, Stdio};
 use log::{info, debug};
 use serde::{Deserialize, Serialize};
 use serde_yaml;
-use tempdir::TempDir;
 use walkdir::{DirEntry, WalkDir};
-use pathdiff::diff_paths;
 
 use crate::Pattern;
 use crate::templating::TemplatingEngine;
@@ -37,7 +35,7 @@ impl Blueprint {
 
         let metadata = serde_yaml::from_str(&meta_raw)?;
 
-        let blueprint = Blueprint {
+        let mut blueprint = Blueprint {
             metadata,
             source,
             post_script: None,
@@ -46,14 +44,6 @@ impl Blueprint {
         blueprint.find_scripts()?;
 
         Ok(blueprint)
-    }
-
-    fn normalize_source_path(path: &Path, rendr_file: &Path) -> String {
-        debug!("Normalizing {} to {}", path.display(), rendr_file.display());
-        match path.is_absolute() {
-            true  => diff_paths(path, rendr_file).unwrap().display().to_string(),
-            false => path.display().to_string(),
-        }
     }
 
     fn find_scripts(&mut self) -> Result<(), DynError> {
@@ -150,12 +140,7 @@ impl Blueprint {
             post_script.run(output_dir, values)?;
         }
 
-        let source_path = self.source.path();
-        debug!("Source path: {}; exists: {}", source_path.display(), source_path.exists());
-        let source = match source_path.exists() {
-            true  => Self::normalize_source_path(&source_path, &output_dir.join(Path::new(".rendr.yaml"))),
-            false => self.source.clone(),
-        };
+        let source = self.source.to_string(output_dir);
 
         debug!("Generating .rendr.yaml file:");
         debug!("  source: {}", source);
@@ -344,11 +329,6 @@ impl Display for ScriptError {
 
         Ok(())
     }
-}
-
-struct RemoteSource {
-    url: String,
-    checked_out: TempDir,
 }
 
 impl Display for Blueprint {
