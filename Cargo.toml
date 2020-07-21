@@ -30,6 +30,7 @@ walkdir = "2"
 glob = "0.3.0"
 log = { version = "0.4", features = ["std", "serde"] }
 env_logger = "0.7.1"
+pathdiff = "0.2.0"
 
 [dev-dependencies]
 cargo-release = "0.13.0"

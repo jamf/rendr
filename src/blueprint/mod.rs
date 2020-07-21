@@ -1,71 +1,49 @@
-use walkdir::DirEntry;
+mod source;
+
+use std::collections::HashMap;
+use std::error::Error;
 use std::fmt::Display;
 use std::fmt::Formatter;
-use std::collections::HashMap;
+use std::fs;
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::error::Error;
-use std::fs;
 
-use tempdir::TempDir;
-use git2::Repository;
-use serde::Deserialize;
-use serde_yaml;
-use walkdir::WalkDir;
 use log::{info, debug};
+use serde::{Deserialize, Serialize};
+use serde_yaml;
+use walkdir::{DirEntry, WalkDir};
 
-use crate::templating::TemplatingEngine;
 use crate::Pattern;
+use crate::templating::TemplatingEngine;
+use source::Source;
 
 type DynError = Box<dyn Error>;
 
 pub struct Blueprint {
     metadata: BlueprintMetadata,
-    dir: BlueprintDir,
+    source: Source,
     post_script: Option<Script>,
 }
 
 impl Blueprint {
-    pub fn new(path: &str) -> Result<Blueprint, DynError> {
-        let mut blueprint;
+    pub fn new(source: &str) -> Result<Blueprint, DynError> {
+        let source = Source::new(source)?;
 
-        if Path::new(path).exists() {
-            blueprint = Self::from_dir(path)?;
-        }
-        else {
-            blueprint = Self::from_repo(path)?;
-        }
+        let meta_raw = fs::read_to_string(source.path().join("metadata.yaml"))?;
+
+        let metadata = serde_yaml::from_str(&meta_raw)?;
+
+        let mut blueprint = Blueprint {
+            metadata,
+            source,
+            post_script: None,
+        };
 
         blueprint.find_scripts()?;
 
         Ok(blueprint)
-    }
-
-    fn from_repo(path: &str) -> Result<Blueprint, DynError> {
-        let dir = TempDir::new("checked_out_blueprint")?;
-
-        Repository::clone(path, &dir)?;
-
-        Self::from_blueprint_dir(BlueprintDir::TempDir(dir))
-    }
-
-    fn from_dir(path: &str) -> Result<Blueprint, DynError> {
-        let path = Path::new(path).to_path_buf();
-
-        Self::from_blueprint_dir(BlueprintDir::Path(path))
-    }
-
-    fn from_blueprint_dir(dir: BlueprintDir) -> Result<Blueprint, DynError> {
-        let meta_raw = fs::read_to_string(dir.path().join("metadata.yaml"))?;
-
-        let metadata = serde_yaml::from_str(&meta_raw)?;
-
-        Ok(Blueprint {
-            metadata,
-            dir,
-            post_script: None,
-        })
     }
 
     fn find_scripts(&mut self) -> Result<(), DynError> {
@@ -76,7 +54,7 @@ impl Blueprint {
 
     fn find_script(&mut self, script: &str) -> Result<Option<Script>, DynError> {
         let mut script_path = PathBuf::new();
-        script_path.push(self.dir.path().canonicalize()?);
+        script_path.push(self.source.path().canonicalize()?);
         script_path.push("scripts");
         script_path.push(format!("{}.sh", script));
 
@@ -108,7 +86,7 @@ impl Blueprint {
     }
 
     fn files(&self) -> impl Iterator<Item=Result<File, walkdir::Error>> {
-        let template_root = self.dir.path().join("template");
+        let template_root = self.source.path().join("template");
         Files::new(&template_root)
     }
 
@@ -162,7 +140,66 @@ impl Blueprint {
             post_script.run(output_dir, values)?;
         }
 
+        let source = self.source.to_string(output_dir);
+
+        debug!("Generating .rendr.yaml file:");
+        debug!("  source: {}", source);
+        debug!("  output_dir: {}", output_dir.display());
+        debug!("  values: {:?}", values);
+        self.generate_rendr_file(&source, &output_dir, &values)?;
+
         Ok(())
+    }
+
+    fn generate_rendr_file(&self, source: &str, output_dir: &Path, values: &HashMap<&str, &str>) -> Result<(), DynError> {
+        let path = output_dir.join(Path::new(".rendr.yaml"));
+        let config = RendrConfig::new(source.to_string().clone(), &self.metadata, values);
+        let yaml = serde_yaml::to_string(&config)?;
+        let mut file = std::fs::File::create(path)?;
+
+        file.write_all(yaml.as_bytes())?;
+
+        Ok(())
+    }
+}
+
+#[derive(Serialize)]
+struct RendrConfig {
+    name: String,
+    version: u32,
+    author: String,
+    description: String,
+    source: String,
+    values: Vec<RendrConfigValue>,
+}
+
+#[derive(Serialize)]
+struct RendrConfigValue {
+    name: String,
+    value: String,
+}
+
+impl RendrConfigValue {
+    fn new(name: String, value: String) -> Self {
+        RendrConfigValue {
+            name,
+            value,
+        }
+    }
+}
+
+impl RendrConfig {
+    fn new(source: String, metadata: &BlueprintMetadata, values: &HashMap<&str, &str>) -> Self {
+        let values = values.iter().map(|(k, v)| RendrConfigValue::new(String::from(*k), String::from(*v))).collect();
+
+        RendrConfig {
+            name: metadata.name.clone(),
+            version: metadata.version,
+            author: metadata.author.clone(),
+            description: metadata.description.clone(),
+            source: source,
+            values: values,
+        }
     }
 }
 
@@ -291,22 +328,6 @@ impl Display for ScriptError {
         }
 
         Ok(())
-    }
-}
-
-enum BlueprintDir {
-    TempDir(TempDir),
-    Path(PathBuf),
-}
-
-impl BlueprintDir {
-    fn path(&self) -> &Path {
-        use BlueprintDir::*;
-
-        match self {
-            TempDir(tmpdir) => tmpdir.path(),
-            Path(path)      => &path,
-        }
     }
 }
 
