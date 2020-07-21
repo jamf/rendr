@@ -1,3 +1,5 @@
+mod source;
+
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::Display;
@@ -8,7 +10,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-use git2::Repository;
 use log::{info, debug};
 use serde::{Deserialize, Serialize};
 use serde_yaml;
@@ -18,59 +19,33 @@ use pathdiff::diff_paths;
 
 use crate::Pattern;
 use crate::templating::TemplatingEngine;
+use source::Source;
 
 type DynError = Box<dyn Error>;
 
 pub struct Blueprint {
     metadata: BlueprintMetadata,
-    dir: BlueprintDir,
+    source: Source,
     post_script: Option<Script>,
-    source: String,
 }
 
 impl Blueprint {
     pub fn new(source: &str) -> Result<Blueprint, DynError> {
-        let mut blueprint;
-        let path = Path::new(source);
+        let source = Source::new(source)?;
 
-        if path.exists() {
-            blueprint = Self::from_dir(path)?;
-        }
-        else {
-            blueprint = Self::from_repo(source)?;
-        }
-
-        blueprint.source = source.to_owned();
-        blueprint.find_scripts()?;
-
-        Ok(blueprint)
-    }
-
-    fn from_repo(path: &str) -> Result<Blueprint, DynError> {
-        let dir = TempDir::new("checked_out_blueprint")?;
-
-        Repository::clone(path, &dir)?;
-
-        Self::from_blueprint_dir(BlueprintDir::TempDir(dir))
-    }
-
-    fn from_dir(path: &Path) -> Result<Blueprint, DynError> {
-        let path = path.to_path_buf();
-
-        Self::from_blueprint_dir(BlueprintDir::Path(path))
-    }
-
-    fn from_blueprint_dir(dir: BlueprintDir) -> Result<Blueprint, DynError> {
-        let meta_raw = fs::read_to_string(dir.path().join("metadata.yaml"))?;
+        let meta_raw = fs::read_to_string(source.path().join("metadata.yaml"))?;
 
         let metadata = serde_yaml::from_str(&meta_raw)?;
 
-        Ok(Blueprint {
+        let blueprint = Blueprint {
             metadata,
-            dir,
+            source,
             post_script: None,
-            source: "".to_owned(),
-        })
+        };
+
+        blueprint.find_scripts()?;
+
+        Ok(blueprint)
     }
 
     fn normalize_source_path(path: &Path, rendr_file: &Path) -> String {
@@ -89,7 +64,7 @@ impl Blueprint {
 
     fn find_script(&mut self, script: &str) -> Result<Option<Script>, DynError> {
         let mut script_path = PathBuf::new();
-        script_path.push(self.dir.path().canonicalize()?);
+        script_path.push(self.source.path().canonicalize()?);
         script_path.push("scripts");
         script_path.push(format!("{}.sh", script));
 
@@ -121,7 +96,7 @@ impl Blueprint {
     }
 
     fn files(&self) -> impl Iterator<Item=Result<File, walkdir::Error>> {
-        let template_root = self.dir.path().join("template");
+        let template_root = self.source.path().join("template");
         Files::new(&template_root)
     }
 
@@ -175,7 +150,7 @@ impl Blueprint {
             post_script.run(output_dir, values)?;
         }
 
-        let source_path = Path::new(&self.source);
+        let source_path = self.source.path();
         debug!("Source path: {}; exists: {}", source_path.display(), source_path.exists());
         let source = match source_path.exists() {
             true  => Self::normalize_source_path(&source_path, &output_dir.join(Path::new(".rendr.yaml"))),
@@ -371,20 +346,9 @@ impl Display for ScriptError {
     }
 }
 
-enum BlueprintDir {
-    TempDir(TempDir),
-    Path(PathBuf),
-}
-
-impl BlueprintDir {
-    fn path(&self) -> &Path {
-        use BlueprintDir::*;
-
-        match self {
-            TempDir(tmpdir) => tmpdir.path(),
-            Path(path)      => &path,
-        }
-    }
+struct RemoteSource {
+    url: String,
+    checked_out: TempDir,
 }
 
 impl Display for Blueprint {
