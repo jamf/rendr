@@ -37,6 +37,7 @@ impl Source {
         }))
     }
 
+    /// The local path where the blueprint data can be found for parsing.
     pub fn path(&self) -> &Path {
         use Source::*;
 
@@ -46,15 +47,19 @@ impl Source {
         }
     }
 
+    /// A blueprint locator to be used in the .rendr.yaml file
+    /// in the rendered project.
     pub fn to_string(&self, from: impl AsRef<Path>) -> String {
         use Source::*;
+
+        let from = from.as_ref().canonicalize().unwrap();
 
         match self {
             Local(path) => pathdiff::diff_paths(path, from)
                                 .unwrap()
-                                .to_str()
-                                .unwrap()
-                                .to_owned(),
+                                .into_os_string()
+                                .into_string()
+                                .unwrap(),
             Remote(src) => src.url().to_string(),
         }
     }
@@ -73,4 +78,19 @@ impl RemoteSource {
     fn url(&self) -> &str {
         &self.url
     }
+}
+
+#[test]
+fn source_canonicalizes_its_path_on_init() {
+    let source = Source::new("test_assets").unwrap();
+
+    assert!(source.path().is_absolute());
+}
+
+#[test]
+fn source_calculates_relative_path_correctly() {
+    let source = Source::new("test_assets/example_blueprint").unwrap();
+    let project_dir = ".";
+
+    assert_eq!(source.to_string(project_dir), "test_assets/example_blueprint");
 }
