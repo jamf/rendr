@@ -511,26 +511,26 @@ mod tests {
         assert_eq!(script_output.as_str(), "something123");
     }
 
-    #[test]
-    fn normalize_absolute_source_path_returns_relative_path() {
-        let blueprint_dir = Path::new("/Users/rendr/blueprints/my-app-blueprint");
-        let rendr_file = Path::new("/Users/rendr/code/foo/.rendr.yaml");
+    // #[test]
+    // fn normalize_absolute_source_path_returns_relative_path() {
+    //     let blueprint_dir = Path::new("/Users/rendr/blueprints/my-app-blueprint");
+    //     let rendr_file = Path::new("/Users/rendr/code/foo/.rendr.yaml");
 
-        let relative_path = Blueprint::normalize_source_path(&blueprint_dir, &rendr_file);
+    //     let relative_path = Blueprint::normalize_source_path(&blueprint_dir, &rendr_file);
 
-        assert_eq!(relative_path, "../blueprints/my-app-blueprint");
-    }
+    //     assert_eq!(relative_path, "../blueprints/my-app-blueprint");
+    // }
 
-    #[test]
-    fn normalize_relative_source_path_returns_relative_path() {
-        let working_dir = Path::new("/Users/rendr/code");
-        let blueprint_dir = Path::new("blueprints/my-app-blueprint");
-        let rendr_file = Path::new("/Users/rendr/code/foo/.rendr.yaml");
+    // #[test]
+    // fn normalize_relative_source_path_returns_relative_path() {
+    //     let working_dir = Path::new("/Users/rendr/code");
+    //     let blueprint_dir = Path::new("blueprints/my-app-blueprint");
+    //     let rendr_file = Path::new("/Users/rendr/code/foo/.rendr.yaml");
 
-        let relative_path = Blueprint::normalize_source_path(&blueprint_dir, &rendr_file);
+    //     let relative_path = Blueprint::normalize_source_path(&blueprint_dir, &rendr_file);
 
-        assert_eq!(relative_path, "../blueprints/my-app-blueprint");
-    }
+    //     assert_eq!(relative_path, "../blueprints/my-app-blueprint");
+    // }
 
     // Test helpers
     fn test_values() -> HashMap<&'static str, &'static str> {
