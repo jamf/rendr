@@ -3,7 +3,7 @@ use super::{TemplatingEngine, RenderError};
 use pest::{
     error::Error,
     Parser as PestParser,
-    iterators::Pair,
+    iterators::{Pair, Pairs},
 };
 use pest_derive::Parser;
 
@@ -14,6 +14,7 @@ struct Parser;
 #[derive(Debug, PartialEq)]
 enum Element<'a> {
     RawText(&'a str),
+    Editable(&'a str, Vec<Element<'a>>),
     Var(&'a str),
 }
 
@@ -46,16 +47,24 @@ fn parse_template_file(file: &str) -> Result<Template, Error<Rule>> {
     fn parse_element(pair: Pair<Rule>) -> Result<Element, Error<Rule>> {
         match pair.as_rule() {
             Rule::raw_text => Ok(Element::RawText(pair.as_str())),
+            Rule::editable => {
+                let mut pairs = pair.into_inner();
+                let name = pairs.next().unwrap().into_inner().as_str();
+                let elements = parse_elements(pairs.next().unwrap().into_inner())?;
+                Ok(Element::Editable(name, elements))
+            },
             Rule::variable => Ok(Element::Var(pair.into_inner().as_str())),
             _              => unreachable!(),
         }
     }
 
-    let elements: Vec<_> = pest_template
-        .map(parse_element)
-        .collect::<Result<_, _>>()?;
+    fn parse_elements(pairs: Pairs<Rule>) -> Result<Vec<Element>, Error<Rule>> {
+        pairs
+            .map(parse_element)
+            .collect::<Result<_, _>>()
+    }
 
-    let template = Template::new(elements);
+    let template = Template::new(parse_elements(pest_template)?);
 
     Ok(template)
 }
@@ -111,6 +120,43 @@ fn parse_consecutive_vars() {
         Element::RawText("and the mome raths outgrabe "),
         Element::Var("foo"),
         Element::Var("bar"),
+    ]);
+}
+
+#[test]
+fn parse_a_simple_editable() {
+    let text = "and the mome {{@ foo }}raths{{@ / }} outgrabe";
+
+    let template = parse_template_file(text)
+        .unwrap();
+
+    assert_eq!(template.elements, [
+        Element::RawText("and the mome "),
+        Element::Editable(
+            "foo",
+            vec!(Element::RawText("raths")),
+        ),
+        Element::RawText(" outgrabe"),
+    ]);
+}
+
+#[test]
+fn parse_an_editable_with_vars() {
+    let text = "and the mome {{@ foo }}raths {{ bar }}{{@ / }} outgrabe";
+
+    let template = parse_template_file(text)
+        .unwrap();
+
+    assert_eq!(template.elements, [
+        Element::RawText("and the mome "),
+        Element::Editable(
+            "foo",
+            vec!(
+                Element::RawText("raths "),
+                Element::Var("bar"),
+            ),
+        ),
+        Element::RawText(" outgrabe"),
     ]);
 }
 

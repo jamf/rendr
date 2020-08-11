@@ -8,7 +8,12 @@ raw_text = ${ ( !"{{" ~ ANY )+ }
 
 variable = !{ "{{" ~ symbol ~ "}}" }
 
+editable_begin_tag = !{ "{{@" ~ symbol ~ "}}" }
+editable_end_tag = !{ "{{@" ~ "/" ~ "}}" }
+editable = ${ editable_begin_tag ~ elements ~ editable_end_tag }
+
 element = { raw_text |
+            editable |
             variable }
 
 elements = @{ element* }
