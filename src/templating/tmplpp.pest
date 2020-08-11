@@ -1,7 +1,16 @@
 WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
 
-raw_text = ${ ANY+ }
+symbol_first_char = _{ ASCII_ALPHA }
+symbol_char = _{ symbol_first_char | ASCII_DIGIT | DASH_PUNCTUATION }
+symbol = @{ symbol_first_char ~ symbol_char* }
 
-element = { raw_text }
+raw_text = ${ ( !"{{" ~ ANY )+ }
 
-template = _{ SOI ~ element* ~ EOI }
+variable = !{ "{{" ~ symbol ~ "}}" }
+
+element = { raw_text |
+            variable }
+
+elements = @{ element* }
+
+template = _{ SOI ~ elements ~ EOI }
