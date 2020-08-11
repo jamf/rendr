@@ -42,8 +42,6 @@ fn parse_template_file(file: &str) -> Result<Template, Error<Rule>> {
         .unwrap()
         .into_inner();
 
-    println!("{:?}", pest_template);
-
     fn parse_element(pair: Pair<Rule>) -> Result<Element, Error<Rule>> {
         match pair.as_rule() {
             Rule::raw_text => Ok(Element::RawText(pair.as_str())),
