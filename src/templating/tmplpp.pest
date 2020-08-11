@@ -1,0 +1,7 @@
+WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
+
+raw_text = ${ ANY+ }
+
+element = { raw_text }
+
+template = _{ SOI ~ element* ~ EOI }

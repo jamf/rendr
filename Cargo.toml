@@ -33,6 +33,8 @@ env_logger = "0.7.1"
 pathdiff = "0.2.0"
 notify = "4.0.15"
 rpassword = "5.0.0"
+pest = "2.1"
+pest_derive = "2.1"
 
 [dev-dependencies]
 cargo-release = "0.13.0"
