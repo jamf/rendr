@@ -69,19 +69,19 @@ impl<'a> Template<'a> {
         // TODO: Is there a DRYer way to write this?
         for element in self.elements.iter() {
             match element {
-                Element::RawText(text)         => result.push_str(text),
+                Element::RawText(text)        => result.push_str(text),
                 Element::Editable(_, content) => {
                     for element in content {
                         match element {
                             Element::RawText(text)  => result.push_str(text),
                             Element::Editable(_, _) => panic!("nested editables are illegal"), // TODO: Proper error handling here.
-                            Element::Var(var_name)         => if let Some(value) = values.get(var_name) {
+                            Element::Var(var_name)  => if let Some(value) = values.get(var_name) {
                                 result.push_str(value);
                             },
                         }
                     }
                 },
-                Element::Var(var_name)         => if let Some(value) = values.get(var_name) {
+                Element::Var(var_name)        => if let Some(value) = values.get(var_name) {
                     result.push_str(value);
                 },
             }
