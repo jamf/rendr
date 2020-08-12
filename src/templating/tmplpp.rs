@@ -93,6 +93,8 @@ impl<'a> Template<'a> {
         Ok(result)
     }
     
+    // TODO: Maybe memoize this somehow? Or create a separate TemplateWithValues
+    // struct that holds the values and a pre-generated regex validator.
     fn regex(&self, values: &HashMap<&str, &str>) -> Regex {
         let len = self.elements.len();
         
@@ -355,6 +357,15 @@ fn validate_simple_text() {
 
     assert!(template.validate_generated_output(&HashMap::new(), "All mimsy were the borogoves."));
     assert!(!template.validate_generated_output(&HashMap::new(), "All mimsy were the borogoves. "));
+}
+
+#[test]
+fn validate_simple_text_with_newlines() {
+    let template = Template::from_str("All mimsy\nwere the borogoves.").unwrap();
+
+    assert!(template.validate_generated_output(&HashMap::new(), "All mimsy\nwere the borogoves."));
+    assert!(!template.validate_generated_output(&HashMap::new(), "All mimsy\nwere the borogoves. "));
+    assert!(!template.validate_generated_output(&HashMap::new(), "All mimsy\nwere the borogoves.\nAll mimsy\nwere the borogoves."));
 }
 
 #[test]
