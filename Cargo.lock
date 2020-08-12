@@ -1638,6 +1638,7 @@ dependencies = [
  "rpassword",
  "pest",
  "pest_derive",
+ "regex",
  "serde",
  "serde_yaml",
  "tempdir",

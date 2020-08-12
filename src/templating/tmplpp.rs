@@ -1,4 +1,6 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use super::{TemplatingEngine, RenderError};
 
@@ -8,6 +10,7 @@ use pest::{
     iterators::{Pair, Pairs},
 };
 use pest_derive::Parser;
+use regex::Regex;
 
 #[derive(Parser)]
 #[grammar = "templating/tmplpp.pest"]
@@ -88,6 +91,39 @@ impl<'a> Template<'a> {
         }
 
         Ok(result)
+    }
+    
+    fn regex(&self, values: &HashMap<&str, &str>) -> Regex {
+        let len = self.elements.len();
+        
+        let mut regex_str = String::from("^");
+
+        fn sanitize_string_literal(s: &str) ->  String {
+            let mut result = s.replace("\\", "\\\\");
+            result = s.replace("(", "\\(");
+            result.replace(")", "\\)")
+        }
+
+        for el in &self.elements {
+            match el {
+                Element::RawText(text)           => regex_str.push_str(&sanitize_string_literal(text)),
+                Element::Var(var_name)           => if let Some(value) = values.get(var_name) {
+                    regex_str.push_str(&sanitize_string_literal(value));
+                },
+                Element::Editable(name, content) => regex_str.push_str(&format!("(?P<{}>(.|\\n)*)", name)),
+            }
+        }
+
+        regex_str.push_str("$");
+        println!("{}", regex_str);
+
+        Regex::from_str(&regex_str).unwrap()
+    }
+
+    fn validate_generated_output(&self, values: &HashMap<&str, &str>, output: &str) -> bool {
+        let regex = self.regex(values);
+
+        regex.is_match(output)
     }
 }
 
@@ -309,4 +345,40 @@ fn render_editable_block_with_vars_inside() {
         ).unwrap(),
         "All mimsy were the borogoves.",
     );
+}
+
+// Validator tests
+
+#[test]
+fn validate_simple_text() {
+    let template = Template::from_str("All mimsy were the borogoves.").unwrap();
+
+    assert!(template.validate_generated_output(&HashMap::new(), "All mimsy were the borogoves."));
+    assert!(!template.validate_generated_output(&HashMap::new(), "All mimsy were the borogoves. "));
+}
+
+#[test]
+fn validate_output_with_vars() {
+    let template = Template::from_str("All mimsy {{ foo }} the borogoves.").unwrap();
+
+    let values = [("foo", "were")].iter()
+        .cloned()
+        .collect();
+
+    assert!(template.validate_generated_output(&values, "All mimsy were the borogoves."));
+    assert!(!template.validate_generated_output(&values, "All mimsy was the borogoves."));
+}
+
+#[test]
+fn validate_output_with_an_editable() {
+    let template = Template::from_str("All mimsy {{@ foo }}were{{@/}} the borogoves.").unwrap();
+
+    let values = HashMap::new();
+
+    assert!(template.validate_generated_output(&values, "All mimsy were the borogoves."));
+    // We're allowed to edit the text inside the editable...
+    assert!(template.validate_generated_output(&values, "All mimsy was the borogoves."));
+    assert!(template.validate_generated_output(&values, "All mimsy asd fsd sdf the borogoves."));
+    // ...but we shouldn't edit the text outside of the editable.
+    assert!(!template.validate_generated_output(&values, "All mimsy were the borogoves. Stuff."));
 }
