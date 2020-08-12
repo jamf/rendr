@@ -127,6 +127,27 @@ impl<'a> Template<'a> {
 
         regex.is_match(output)
     }
+
+    fn upgrade_to(&self, new_template: &Template, values: &HashMap<&str, &str>, output: &str) -> String {
+        let regex = self.regex(values);
+
+        let caps = regex.captures(output).unwrap();
+
+        let mut result = String::new();
+
+        // TODO: Is there a DRYer way to write this?
+        for element in new_template.elements.iter() {
+            match element {
+                Element::RawText(text)     => result.push_str(text),
+                Element::Editable(name, _) => result.push_str(caps.name(name).unwrap().as_str()),
+                Element::Var(var_name)     => if let Some(value) = values.get(var_name) {
+                    result.push_str(value);
+                },
+            }
+        }
+
+        result
+    }
 }
 
 #[derive(Debug)]
@@ -392,4 +413,54 @@ fn validate_output_with_an_editable() {
     assert!(template.validate_generated_output(&values, "All mimsy asd fsd sdf the borogoves."));
     // ...but we shouldn't edit the text outside of the editable.
     assert!(!template.validate_generated_output(&values, "All mimsy were the borogoves. Stuff."));
+}
+
+// Upgrade tests
+
+#[test]
+fn upgrade_output_with_simple_text() {
+    let v1 = Template::from_str("All mimsy were the borogoves.").unwrap();
+    let v2 = Template::from_str("All mimsy were my borogoves.").unwrap();
+
+    let values = HashMap::new();
+
+    let output = v1.render_to_string(&values).unwrap();
+
+    assert_eq!(output, "All mimsy were the borogoves.");
+
+    let new_output = v1.upgrade_to(&v2, &values, &output);
+
+    assert_eq!(new_output, "All mimsy were my borogoves.");
+}
+
+#[test]
+fn upgrade_output_with_vars() {
+    let v1 = Template::from_str("All mimsy {{ foo }} the borogoves.").unwrap();
+    let v2 = Template::from_str("All mimsy {{ foo }} my borogoves.").unwrap();
+
+    let values = [("foo", "were")].iter()
+        .cloned()
+        .collect();
+
+    let output = v1.render_to_string(&values).unwrap();
+
+    assert_eq!(output, "All mimsy were the borogoves.");
+
+    let new_output = v1.upgrade_to(&v2, &values, &output);
+
+    assert_eq!(new_output, "All mimsy were my borogoves.");
+}
+
+#[test]
+fn upgrade_output_with_an_editable() {
+    let v1 = Template::from_str("All mimsy {{@ foo }}were{{@/}} the borogoves.").unwrap();
+    let v2 = Template::from_str("All mimsy {{@ foo }}were{{@/}} my borogoves.").unwrap();
+
+    let values = HashMap::new();
+
+    let modified_output = "All mimsy bla bla bla the borogoves.";
+
+    let new_output = v1.upgrade_to(&v2, &values, modified_output);
+
+    assert_eq!(new_output, "All mimsy bla bla bla my borogoves.");
 }
