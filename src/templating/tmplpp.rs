@@ -66,13 +66,24 @@ impl<'a> Template<'a> {
     fn render_to_string(&self, values: &HashMap<&str, &str>) -> Result<String, RenderError> {
         let mut result = String::new();
 
+        // TODO: Is there a DRYer way to write this?
         for element in self.elements.iter() {
             match element {
                 Element::RawText(text)         => result.push_str(text),
-                Element::Editable(_, _content) => todo!(),
+                Element::Editable(_, content) => {
+                    for element in content {
+                        match element {
+                            Element::RawText(text)  => result.push_str(text),
+                            Element::Editable(_, _) => panic!("nested editables are illegal"), // TODO: Proper error handling here.
+                            Element::Var(var_name)         => if let Some(value) = values.get(var_name) {
+                                result.push_str(value);
+                            },
+                        }
+                    }
+                },
                 Element::Var(var_name)         => if let Some(value) = values.get(var_name) {
-                                                      result.push_str(value);
-                                                  },
+                    result.push_str(value);
+                },
             }
         }
 
@@ -239,4 +250,63 @@ fn attempt_parsing_invalid_template_fails() {
     let text = "and the mome raths {{ outgrabe";
 
     assert!(Template::from_str(text).is_err());
+}
+
+// Render tests
+
+#[test]
+fn render_empty_template() {
+    let template = Template::from_str("").unwrap();
+
+    assert_eq!(template.render_to_string(&HashMap::new()).unwrap(), "");
+}
+
+#[test]
+fn render_raw_text() {
+    let template = Template::from_str("All mimsy were the borogoves.").unwrap();
+
+    assert_eq!(template.render_to_string(&HashMap::new()).unwrap(), "All mimsy were the borogoves.");
+}
+
+#[test]
+fn render_empty_var() {
+    let template = Template::from_str("All mimsy were {{ foo }} borogoves.").unwrap();
+
+    assert_eq!(template.render_to_string(&HashMap::new()).unwrap(), "All mimsy were  borogoves.");
+}
+
+#[test]
+fn render_single_var() {
+    let template = Template::from_str("All mimsy were {{ foo }} borogoves.").unwrap();
+
+    assert_eq!(
+        template.render_to_string(&[("foo", "the")].iter()
+            .cloned()
+            .collect()
+        ).unwrap(),
+        "All mimsy were the borogoves.",
+    );
+}
+
+#[test]
+fn render_editable_block() {
+    let template = Template::from_str("All mimsy were {{@ foo }}the{{@ / }} borogoves.").unwrap();
+
+    assert_eq!(
+        template.render_to_string(&HashMap::new()).unwrap(),
+        "All mimsy were the borogoves.",
+    );
+}
+
+#[test]
+fn render_editable_block_with_vars_inside() {
+    let template = Template::from_str("All {{@ foo }}mimsy {{ bar }} the{{@ / }} borogoves.").unwrap();
+
+    assert_eq!(
+        template.render_to_string(&[("bar", "were")].iter()
+            .cloned()
+            .collect()
+        ).unwrap(),
+        "All mimsy were the borogoves.",
+    );
 }
