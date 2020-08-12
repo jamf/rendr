@@ -42,6 +42,8 @@ fn parse_template_file(file: &str) -> Result<Template, Error<Rule>> {
         .unwrap()
         .into_inner();
 
+    println!("{:?}", pest_template);
+
     fn parse_element(pair: Pair<Rule>) -> Result<Element, Error<Rule>> {
         match pair.as_rule() {
             Rule::raw_text => Ok(Element::RawText(pair.as_str())),
@@ -155,6 +157,42 @@ fn parse_an_editable_with_vars() {
             ),
         ),
         Element::RawText(" outgrabe"),
+    ]);
+}
+
+#[test]
+fn strip_newlines_when_parsing_editables() {
+    let text = "stuff\n{{@ foo }}\nstuff\n{{@ / }}";
+
+    let template = parse_template_file(text)
+        .unwrap();
+
+    assert_eq!(template.elements, [
+        Element::RawText("stuff\n"),
+        Element::Editable(
+            "foo",
+            vec!(
+                Element::RawText("stuff"),
+            ),
+        ),
+    ]);
+}
+
+#[test]
+fn strip_only_one_newline_when_parsing_editables() {
+    let text = "stuff\n{{@ foo }}\n\nstuff\n\n\n{{@ / }}";
+
+    let template = parse_template_file(text)
+        .unwrap();
+
+    assert_eq!(template.elements, [
+        Element::RawText("stuff\n"),
+        Element::Editable(
+            "foo",
+            vec!(
+                Element::RawText("\nstuff\n\n"),
+            ),
+        ),
     ]);
 }
 

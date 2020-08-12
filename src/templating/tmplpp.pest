@@ -1,15 +1,16 @@
-WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
+WHITESPACE = _{ " " | "\t" }
 
 symbol_first_char = _{ ASCII_ALPHA }
 symbol_char = _{ symbol_first_char | ASCII_DIGIT | DASH_PUNCTUATION }
 symbol = @{ symbol_first_char ~ symbol_char* }
 
-raw_text = ${ ( !"{{" ~ ANY )+ }
+raw_text = ${ ( !"{{" ~ !editable_end_tag ~ ANY )+ }
 
 variable = !{ "{{" ~ symbol ~ "}}" }
 
-editable_begin_tag = !{ "{{@" ~ symbol ~ "}}" }
-editable_end_tag = !{ "{{@" ~ "/" ~ "}}" }
+editable_begin_tag = !{ "{{@" ~ symbol ~ "}}" ~ NEWLINE? }
+editable_end_tag = !{ NEWLINE? ~ "{{@" ~ "/" ~ "}}" }
+
 editable = ${ editable_begin_tag ~ elements ~ editable_end_tag }
 
 element = { raw_text |
