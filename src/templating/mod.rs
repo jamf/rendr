@@ -4,6 +4,7 @@
 mod mustache;
 mod tmplpp;
 pub use self::mustache::Mustache;
+pub use self::tmplpp::Tmplpp;
 
 use std::collections::HashMap;
 use std::error::Error;

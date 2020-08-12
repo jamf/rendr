@@ -1,7 +1,7 @@
 WHITESPACE = _{ " " | "\t" }
 
 symbol_first_char = _{ ASCII_ALPHA }
-symbol_char = _{ symbol_first_char | ASCII_DIGIT | DASH_PUNCTUATION }
+symbol_char = _{ symbol_first_char | ASCII_DIGIT | "-" | "_" }
 symbol = @{ symbol_first_char ~ symbol_char* }
 
 raw_text = ${ ( !"{{" ~ !editable_end_tag ~ ANY )+ }

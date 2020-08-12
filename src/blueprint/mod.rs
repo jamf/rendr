@@ -391,6 +391,12 @@ mod tests {
     use std::collections::HashMap;
     use std::fs;
     use tempdir::TempDir;
+<<<<<<< HEAD
+=======
+    use crate::blueprint::Blueprint;
+    use crate::templating::Tmplpp;
+    use super::*;
+>>>>>>> HC-2357 Substitute Mustache with our custom templating engine (tmpl++)
 
     #[test]
     fn parse_example_blueprint_metadata() {
@@ -414,11 +420,15 @@ mod tests {
 
         let output_dir = TempDir::new("my-project").unwrap();
 
-        let mustache = Mustache::new();
+        let engine = Tmplpp::new();
 
+<<<<<<< HEAD
         blueprint
             .render(&mustache, &test_values(), output_dir.path())
             .unwrap();
+=======
+        blueprint.render(&engine, &test_values(), output_dir.path()).unwrap();
+>>>>>>> HC-2357 Substitute Mustache with our custom templating engine (tmpl++)
 
         let test = fs::read_to_string(output_dir.path().join("test.yaml")).unwrap();
         let another_test = fs::read_to_string(output_dir.path().join("another-test.yaml")).unwrap();
@@ -435,11 +445,15 @@ mod tests {
 
         let output_dir = TempDir::new("my-project").unwrap();
 
-        let mustache = Mustache::new();
+        let engine = Tmplpp::new();
 
+<<<<<<< HEAD
         blueprint
             .render(&mustache, &test_values(), output_dir.path())
             .unwrap();
+=======
+        blueprint.render(&engine, &test_values(), output_dir.path()).unwrap();
+>>>>>>> HC-2357 Substitute Mustache with our custom templating engine (tmpl++)
 
         let test = fs::read_to_string(output_dir.path().join("dir/test.yaml")).unwrap();
 
@@ -453,11 +467,15 @@ mod tests {
 
         let output_dir = TempDir::new("my-project").unwrap();
 
-        let mustache = Mustache::new();
+        let engine = Tmplpp::new();
 
+<<<<<<< HEAD
         blueprint
             .render(&mustache, &test_values(), output_dir.path())
             .unwrap();
+=======
+        blueprint.render(&engine, &test_values(), output_dir.path()).unwrap();
+>>>>>>> HC-2357 Substitute Mustache with our custom templating engine (tmpl++)
 
         let excluded_file = fs::read_to_string(output_dir.path().join("excluded_file")).unwrap();
 
@@ -470,11 +488,15 @@ mod tests {
 
         let output_dir = TempDir::new("my-project").unwrap();
 
-        let mustache = Mustache::new();
+        let engine = Tmplpp::new();
 
+<<<<<<< HEAD
         blueprint
             .render(&mustache, &test_values(), output_dir.path())
             .unwrap();
+=======
+        blueprint.render(&engine, &test_values(), output_dir.path()).unwrap();
+>>>>>>> HC-2357 Substitute Mustache with our custom templating engine (tmpl++)
 
         let excluded_file1 =
             fs::read_to_string(output_dir.path().join("excluded_files/foo")).unwrap();
@@ -515,11 +537,15 @@ mod tests {
 
         let output_dir = TempDir::new("my-project").unwrap();
 
-        let mustache = Mustache::new();
+        let engine = Tmplpp::new();
 
+<<<<<<< HEAD
         blueprint
             .render(&mustache, &test_values(), output_dir.path())
             .unwrap();
+=======
+        blueprint.render(&engine, &test_values(), output_dir.path()).unwrap();
+>>>>>>> HC-2357 Substitute Mustache with our custom templating engine (tmpl++)
 
         let script_output = fs::read_to_string(output_dir.path().join("script_output.md")).unwrap();
 

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::{TemplatingEngine, RenderError};
 
 use pest::{
@@ -30,8 +32,6 @@ impl<'a> Template<'a> {
             .unwrap()
             .into_inner();
 
-        println!("{:?}", pest_template);
-
         fn parse_element(pair: Pair<Rule>) -> Result<Element, Error<Rule>> {
             match pair.as_rule() {
                 Rule::raw_text => Ok(Element::RawText(pair.as_str())),
@@ -62,11 +62,47 @@ impl<'a> Template<'a> {
             elements,
         }
     }
+
+    fn render_to_string(&self, values: &HashMap<&str, &str>) -> Result<String, RenderError> {
+        let mut result = String::new();
+
+        for element in self.elements.iter() {
+            match element {
+                Element::RawText(text)         => result.push_str(text),
+                Element::Editable(_, _content) => todo!(),
+                Element::Var(var_name)         => if let Some(value) = values.get(var_name) {
+                                                      result.push_str(value);
+                                                  },
+            }
+        }
+
+        Ok(result)
+    }
 }
 
 #[derive(Debug)]
-pub struct Tmplpp {
+pub struct Tmplpp;
 
+impl Tmplpp {
+    pub fn new() -> Self {
+        Tmplpp
+    }
+}
+
+impl TemplatingEngine for Tmplpp {
+    fn render_template(&self, template_str: &str, values: &HashMap<&str, &str>) -> Result<String, RenderError> {
+        let template = Template::from_str(template_str)?;
+
+        Ok(template.render_to_string(&values)?)
+    }
+}
+
+impl From<Error<Rule>> for RenderError {
+    fn from(e: Error<Rule>) -> Self {
+        RenderError {
+            inner: Box::new(e),
+        }
+    }
 }
 
 // Parser tests
