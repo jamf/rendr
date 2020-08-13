@@ -464,3 +464,67 @@ fn upgrade_output_with_an_editable() {
 
     assert_eq!(new_output, "All mimsy bla bla bla my borogoves.");
 }
+
+#[test]
+fn upgrade_complex_example() {
+    let v1 = Template::from_str(r#"
+import math
+// User-defined imports go after this line.
+{{@ imports }}{{@ / }}
+
+def main():
+{{@ code }}
+    print("Hello, {{ name }}!")
+{{@ / }}
+
+// Foo
+"#)
+        .unwrap();
+    let v2 = Template::from_str(r#"
+import math
+from foo import bar
+
+def main():
+{{@ code }}
+    print("Hello!")
+{{@ / }}
+
+// Foo
+
+// User-defined imports go after this line.
+{{@ imports }}{{@ / }}
+"#)
+        .unwrap();
+
+    let values = HashMap::new();
+
+    let modified_output = r#"
+import math
+// User-defined imports go after this line.
+import this
+import that
+
+def main():
+    do_important_businessy_things()
+    do_more_things()
+
+// Foo
+"#;
+
+    let expected_output_after_upgrade = r#"
+import math
+from foo import bar
+
+def main():
+    do_important_businessy_things()
+    do_more_things()
+
+// Foo
+
+// User-defined imports go after this line.
+import this
+import that
+"#;
+
+    assert_eq!(v1.upgrade_to(&v2, &values, modified_output), expected_output_after_upgrade);
+}
