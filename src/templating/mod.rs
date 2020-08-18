@@ -6,17 +6,17 @@ mod tmplpp;
 pub use self::mustache::Mustache;
 pub use self::tmplpp::Tmplpp;
 
-use std::collections::HashMap;
-use std::error::Error;
+use crate::blueprint::Values;
+
 use std::fmt::Display;
 use std::fmt::Formatter;
 
 /// The trait for integrating templating engines.
 pub trait TemplatingEngine {
-    fn render_template(
+    fn render_template<'v>(
         &self,
         template: &str,
-        values: &HashMap<&str, &str>,
+        values: impl AsRef<Values<'v>>,
     ) -> Result<String, RenderError>;
 }
 

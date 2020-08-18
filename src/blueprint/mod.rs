@@ -1,6 +1,6 @@
 mod source;
+mod values;
 
-use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -9,6 +9,7 @@ use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::clone::Clone;
 
 use git2::RemoteCallbacks;
 use log::{debug, info};
@@ -19,6 +20,7 @@ use walkdir::{DirEntry, WalkDir};
 use crate::templating::TemplatingEngine;
 use crate::Pattern;
 use source::Source;
+pub use values::Values;
 
 type DynError = Box<dyn Error>;
 
@@ -105,11 +107,11 @@ impl Blueprint {
             .is_some()
     }
 
-    pub fn render<TE: TemplatingEngine>(
-        &self,
-        engine: &TE,
-        values: &HashMap<&str, &str>,
-        output_dir: &Path,
+    pub fn render<'s, TE: TemplatingEngine>(
+            &self,
+            engine: &TE,
+            values: impl AsRef<Values<'s>> + std::fmt::Debug,
+            output_dir: &Path,
     ) -> Result<(), DynError> {
         // Create our output directory if it doesn't exist yet.
         debug!("Creating root project dir {:?}", &output_dir);
@@ -146,7 +148,7 @@ impl Blueprint {
         }
 
         if let Some(post_script) = &self.post_script {
-            post_script.run(output_dir, values)?;
+            post_script.run(output_dir, &values)?;
         }
 
         let source = self.source.to_string(output_dir);
@@ -160,14 +162,9 @@ impl Blueprint {
         Ok(())
     }
 
-    fn generate_rendr_file(
-        &self,
-        source: &str,
-        output_dir: &Path,
-        values: &HashMap<&str, &str>,
-    ) -> Result<(), DynError> {
+    fn generate_rendr_file<'s>(&self, source: &str, output_dir: &Path, values: impl AsRef<Values<'s>>) -> Result<(), DynError> {
         let path = output_dir.join(Path::new(".rendr.yaml"));
-        let config = RendrConfig::new(source.to_string().clone(), &self.metadata, values);
+        let config = RendrConfig::new(source.to_string().clone(), &self.metadata, values.as_ref().clone());
         let yaml = serde_yaml::to_string(&config)?;
         let mut file = std::fs::File::create(path)?;
 
@@ -177,18 +174,19 @@ impl Blueprint {
     }
 }
 
-#[derive(Serialize)]
-struct RendrConfig {
+#[derive(Serialize, Deserialize)]
+pub struct RendrConfig<'v> {
     name: String,
     version: u32,
     author: String,
     description: String,
     source: String,
-    values: Vec<RendrConfigValue>,
+    #[serde(borrow)]
+    values: Values<'v>,
 }
 
-#[derive(Serialize)]
-struct RendrConfigValue {
+#[derive(Serialize, Deserialize)]
+pub struct RendrConfigValue {
     name: String,
     value: String,
 }
@@ -199,20 +197,15 @@ impl RendrConfigValue {
     }
 }
 
-impl RendrConfig {
-    fn new(source: String, metadata: &BlueprintMetadata, values: &HashMap<&str, &str>) -> Self {
-        let values = values
-            .iter()
-            .map(|(k, v)| RendrConfigValue::new(String::from(*k), String::from(*v)))
-            .collect();
-
+impl<'v> RendrConfig<'v> {
+    fn new(source: String, metadata: &BlueprintMetadata, values: impl Into<Values<'v>> + 'v) -> Self {
         RendrConfig {
             name: metadata.name.clone(),
             version: metadata.version,
             author: metadata.author.clone(),
             description: metadata.description.clone(),
-            source: source,
-            values: values,
+            source,
+            values: values.into(),
         }
     }
 }
@@ -289,7 +282,7 @@ impl Script {
         }
     }
 
-    fn run(&self, working_dir: &Path, values: &HashMap<&str, &str>) -> Result<(), DynError> {
+    fn run<'v>(&self, working_dir: &Path, values: impl AsRef<Values<'v>>) -> Result<(), DynError> {
         info!("Running blueprint script: {}", &self.name);
 
         #[cfg(debug)]
@@ -299,7 +292,7 @@ impl Script {
         let output = Command::new("sh")
             .arg("-c")
             .arg(&self.path)
-            .envs(values)
+            .envs(values.as_ref().map())
             .current_dir(working_dir)
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
@@ -391,12 +384,9 @@ mod tests {
     use std::collections::HashMap;
     use std::fs;
     use tempdir::TempDir;
-<<<<<<< HEAD
-=======
     use crate::blueprint::Blueprint;
     use crate::templating::Tmplpp;
     use super::*;
->>>>>>> HC-2357 Substitute Mustache with our custom templating engine (tmpl++)
 
     #[test]
     fn parse_example_blueprint_metadata() {
@@ -422,13 +412,9 @@ mod tests {
 
         let engine = Tmplpp::new();
 
-<<<<<<< HEAD
         blueprint
             .render(&mustache, &test_values(), output_dir.path())
             .unwrap();
-=======
-        blueprint.render(&engine, &test_values(), output_dir.path()).unwrap();
->>>>>>> HC-2357 Substitute Mustache with our custom templating engine (tmpl++)
 
         let test = fs::read_to_string(output_dir.path().join("test.yaml")).unwrap();
         let another_test = fs::read_to_string(output_dir.path().join("another-test.yaml")).unwrap();
@@ -447,13 +433,9 @@ mod tests {
 
         let engine = Tmplpp::new();
 
-<<<<<<< HEAD
         blueprint
             .render(&mustache, &test_values(), output_dir.path())
             .unwrap();
-=======
-        blueprint.render(&engine, &test_values(), output_dir.path()).unwrap();
->>>>>>> HC-2357 Substitute Mustache with our custom templating engine (tmpl++)
 
         let test = fs::read_to_string(output_dir.path().join("dir/test.yaml")).unwrap();
 
@@ -469,13 +451,9 @@ mod tests {
 
         let engine = Tmplpp::new();
 
-<<<<<<< HEAD
         blueprint
             .render(&mustache, &test_values(), output_dir.path())
             .unwrap();
-=======
-        blueprint.render(&engine, &test_values(), output_dir.path()).unwrap();
->>>>>>> HC-2357 Substitute Mustache with our custom templating engine (tmpl++)
 
         let excluded_file = fs::read_to_string(output_dir.path().join("excluded_file")).unwrap();
 
@@ -490,13 +468,9 @@ mod tests {
 
         let engine = Tmplpp::new();
 
-<<<<<<< HEAD
         blueprint
             .render(&mustache, &test_values(), output_dir.path())
             .unwrap();
-=======
-        blueprint.render(&engine, &test_values(), output_dir.path()).unwrap();
->>>>>>> HC-2357 Substitute Mustache with our custom templating engine (tmpl++)
 
         let excluded_file1 =
             fs::read_to_string(output_dir.path().join("excluded_files/foo")).unwrap();
@@ -539,13 +513,9 @@ mod tests {
 
         let engine = Tmplpp::new();
 
-<<<<<<< HEAD
         blueprint
             .render(&mustache, &test_values(), output_dir.path())
             .unwrap();
-=======
-        blueprint.render(&engine, &test_values(), output_dir.path()).unwrap();
->>>>>>> HC-2357 Substitute Mustache with our custom templating engine (tmpl++)
 
         let script_output = fs::read_to_string(output_dir.path().join("script_output.md")).unwrap();
 

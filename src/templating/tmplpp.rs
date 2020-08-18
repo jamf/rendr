@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use super::{TemplatingEngine, RenderError};
+use crate::blueprint::Values;
 
 use pest::{
     error::Error,
@@ -66,7 +67,8 @@ impl<'a> Template<'a> {
         }
     }
 
-    fn render_to_string(&self, values: &HashMap<&str, &str>) -> Result<String, RenderError> {
+    fn render_to_string<'v>(&self, values: impl AsRef<Values<'v>>) -> Result<String, RenderError> {
+        let values = values.as_ref();
         let mut result = String::new();
 
         // TODO: Is there a DRYer way to write this?
@@ -95,7 +97,7 @@ impl<'a> Template<'a> {
     
     // TODO: Maybe memoize this somehow? Or create a separate TemplateWithValues
     // struct that holds the values and a pre-generated regex validator.
-    fn regex(&self, values: &HashMap<&str, &str>) -> Regex {
+    fn regex(&self, values: &Values) -> Regex {
         let len = self.elements.len();
         
         let mut regex_str = String::from("^");
@@ -122,13 +124,15 @@ impl<'a> Template<'a> {
         Regex::from_str(&regex_str).unwrap()
     }
 
-    fn validate_generated_output(&self, values: &HashMap<&str, &str>, output: &str) -> bool {
-        let regex = self.regex(values);
+    fn validate_generated_output<'v>(&self, values: impl AsRef<Values<'v>>, output: &str) -> bool {
+        let regex = self.regex(values.as_ref());
 
         regex.is_match(output)
     }
 
-    fn upgrade_to(&self, new_template: &Template, values: &HashMap<&str, &str>, output: &str) -> String {
+    fn upgrade_to<'v>(&self, new_template: &Template, values: impl AsRef<Values<'v>>, output: &str) -> String {
+        let values = values.as_ref();
+
         let regex = self.regex(values);
 
         let caps = regex.captures(output).unwrap();
@@ -160,10 +164,10 @@ impl Tmplpp {
 }
 
 impl TemplatingEngine for Tmplpp {
-    fn render_template(&self, template_str: &str, values: &HashMap<&str, &str>) -> Result<String, RenderError> {
+    fn render_template<'v>(&self, template_str: &str, values: impl AsRef<Values<'v>>) -> Result<String, RenderError> {
         let template = Template::from_str(template_str)?;
 
-        Ok(template.render_to_string(&values)?)
+        Ok(template.render_to_string(values)?)
     }
 }
 
@@ -341,7 +345,7 @@ fn render_single_var() {
     assert_eq!(
         template.render_to_string(&[("foo", "the")].iter()
             .cloned()
-            .collect()
+            .collect::<HashMap<_, _>>()
         ).unwrap(),
         "All mimsy were the borogoves.",
     );
@@ -364,7 +368,7 @@ fn render_editable_block_with_vars_inside() {
     assert_eq!(
         template.render_to_string(&[("bar", "were")].iter()
             .cloned()
-            .collect()
+            .collect::<HashMap<_, _>>()
         ).unwrap(),
         "All mimsy were the borogoves.",
     );
@@ -393,7 +397,7 @@ fn validate_simple_text_with_newlines() {
 fn validate_output_with_vars() {
     let template = Template::from_str("All mimsy {{ foo }} the borogoves.").unwrap();
 
-    let values = [("foo", "were")].iter()
+    let values: HashMap<_, _> = [("foo", "were")].iter()
         .cloned()
         .collect();
 
@@ -438,7 +442,7 @@ fn upgrade_output_with_vars() {
     let v1 = Template::from_str("All mimsy {{ foo }} the borogoves.").unwrap();
     let v2 = Template::from_str("All mimsy {{ foo }} my borogoves.").unwrap();
 
-    let values = [("foo", "were")].iter()
+    let values: HashMap<_, _> = [("foo", "were")].iter()
         .cloned()
         .collect();
 

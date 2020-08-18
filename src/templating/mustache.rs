@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
 use super::{RenderError, TemplatingEngine};
+use super::{TemplatingEngine, RenderError};
+use crate::blueprint::Values;
 
 /// [{{ mustache }}](https://mustache.github.io/) is a simple, logic-less templating engine.
 pub struct Mustache {}
@@ -12,14 +14,10 @@ impl Mustache {
 }
 
 impl TemplatingEngine for Mustache {
-    fn render_template(
-        &self,
-        template: &str,
-        values: &HashMap<&str, &str>,
-    ) -> Result<String, RenderError> {
+    fn render_template<'v>(&self, template: &str, values: impl AsRef<Values<'v>>) -> Result<String, RenderError> {
         let template = mustache::compile_str(template)?;
 
-        Ok(template.render_to_string(&values)?)
+        Ok(template.render_to_string(values.as_ref().map())?)
     }
 }
 
