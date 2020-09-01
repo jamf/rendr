@@ -1,6 +1,7 @@
 mod source;
 
 use std::collections::HashMap;
+use std::env;
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -22,9 +23,9 @@ use source::Source;
 type DynError = Box<dyn Error>;
 
 pub struct Blueprint {
-    metadata: BlueprintMetadata,
-    source: Source,
-    post_script: Option<Script>,
+    pub metadata: BlueprintMetadata,
+    pub source: Source,
+    pub post_script: Option<Script>,
 }
 
 impl Blueprint {
@@ -141,17 +142,61 @@ impl Blueprint {
         }
 
         let source = self.source.to_string(output_dir);
+        self.generate_rendr_file(&source, &output_dir, &values)?;
 
-        debug!("Generating .rendr.yaml file:");
-        debug!("  source: {}", source);
-        debug!("  output_dir: {}", output_dir.display());
-        debug!("  values: {:?}", values);
+        Ok(())
+    }
+
+    pub fn render_upgrade<TE: TemplatingEngine>(
+            &self,
+            engine: &TE,
+            values: &HashMap<&str, &str>,
+            output_dir: &Path,
+            source: &str,
+    ) -> Result<(), DynError> {
+        info!("Upgrading to blueprint version {}", &self.metadata.version);
+        debug!("Root project dir {:?}", &output_dir);
+
+        for file in self.files() {
+            let file = file?;
+            let path = file.path();
+            let output_path = output_dir.join(file.path_from_template_root());
+
+            if path.is_file() {
+                if self.is_excluded(&file.path_from_template_root) {
+                    debug!("Copying {:?} to {:?} without templating.", &path, &output_path);
+                    fs::copy(path, output_path)?;
+                }
+                else if output_path.exists() {
+                    debug!("Skipping {:?}, file already exists", &path);
+                }
+                else {
+                    debug!("Using template {:?} to render {:?}", &path, &output_path);
+                    let contents = fs::read_to_string(&path)?;
+                    let contents = engine.render_template(&contents, &values)?;
+                    fs::write(output_path, &contents)?;
+                }
+            }
+            else if path.is_dir() {
+                if !output_path.is_dir() {
+                    debug!("Creating directory {:?}", &output_path);
+                    fs::create_dir(&output_path)?;
+                }
+            }
+        }
+
+        debug!("TODO: run upgrade script");
+
         self.generate_rendr_file(&source, &output_dir, &values)?;
 
         Ok(())
     }
 
     fn generate_rendr_file(&self, source: &str, output_dir: &Path, values: &HashMap<&str, &str>) -> Result<(), DynError> {
+        debug!("Generating .rendr.yaml file:");
+        debug!("  source: {}", source);
+        debug!("  output_dir: {}", output_dir.display());
+        debug!("  values: {:?}", values);
         let path = output_dir.join(Path::new(".rendr.yaml"));
         let config = RendrConfig::new(source.to_string().clone(), &self.metadata, values);
         let yaml = serde_yaml::to_string(&config)?;
@@ -165,18 +210,18 @@ impl Blueprint {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RendrConfig {
-    name: String,
-    version: u32,
-    author: String,
-    description: String,
-    source: String,
-    values: Vec<RendrConfigValue>,
+    pub name: String,
+    pub version: u32,
+    pub author: String,
+    pub description: String,
+    pub source: String,
+    pub values: Vec<RendrConfigValue>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RendrConfigValue {
-    name: String,
-    value: String,
+    pub name: String,
+    pub value: String,
 }
 
 impl RendrConfigValue {
@@ -286,7 +331,7 @@ impl File {
     }
 }
 
-struct Script {
+pub struct Script {
     name: String,
     path: PathBuf,
 }
@@ -366,11 +411,11 @@ impl Display for Blueprint {
 }
 
 #[derive(Deserialize)]
-struct BlueprintMetadata {
-    name: String,
-    version: u32,
-    author: String,
-    description: String,
+pub struct BlueprintMetadata {
+    pub name: String,
+    pub version: u32,
+    pub author: String,
+    pub description: String,
     values: Vec<ValueSpec>,
     #[serde(default)]
     exclusions: Vec<Pattern>,
