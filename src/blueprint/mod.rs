@@ -239,6 +239,30 @@ impl RendrConfig {
     pub fn blueprint(&self) -> Result<Blueprint, BlueprintInitError> {
         Blueprint::new(&self.source, None)
     }
+
+    pub fn load(metadata_file: &PathBuf) -> Result<Option<RendrConfig>, DynError> {
+        let yaml = fs::read_to_string(metadata_file)?;
+        let config: RendrConfig = serde_yaml::from_str(&yaml)?;
+
+        Ok(Some(config))
+    }
+}
+
+impl Display for RendrConfig {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        writeln!(f, "name: {}", &self.name)?;
+        writeln!(f, "version: {}", &self.version)?;
+        writeln!(f, "description: {}", &self.description)?;
+        writeln!(f, "author: {}", &self.author)?;
+        writeln!(f, "source: {}", &self.source)?;
+        writeln!(f, "values:")?;
+        for (name, value) in self.values.iter() {
+            writeln!(f, "- name: {}", name);
+            writeln!(f, "  value: {}", value);
+        }
+
+        Ok(())
+    }
 }
 
 pub struct Files {

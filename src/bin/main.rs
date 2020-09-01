@@ -1,6 +1,8 @@
 mod check;
 mod init;
 mod update;
+mod info;
+mod upgrade;
 
 use std::env;
 use std::error::Error;
@@ -67,6 +69,8 @@ fn run_app() -> Result<(), DynError> {
         ("init", Some(args)) => init::init(args)?,
         ("check", Some(args)) => check::check(args)?,
         ("update", Some(args)) => update::update(args)?,
+        ("upgrade", Some(args)) => upgrade::upgrade(args)?,
+        ("info", Some(args)) => info::info(args)?,
         _ => panic!("unknown subcommand"),
     }
 

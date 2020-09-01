@@ -79,3 +79,19 @@ subcommands:
           help: The blueprint to update to
           takes_value: true
           required: true
+  - info:
+      about: Displays blueprint info for this project
+      args:
+      - dir:
+          short: d
+          long: dir
+          help: The project directory path
+          takes_value: true
+  - upgrade:
+      about: Upgrade an existing project to latest blueprint version
+      args:
+      - blueprint-version:
+          short: v
+          long: blueprint-version
+          help: The version of the blueprint to upgrade (defaults to latest)
+          takes_value: true
