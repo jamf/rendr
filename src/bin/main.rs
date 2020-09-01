@@ -1,4 +1,6 @@
+mod info;
 mod init;
+mod upgrade;
 
 use std::result::Result;
 use std::error::Error;
@@ -30,7 +32,7 @@ const LOG_LEVEL_ENV_VAR: &str = "RENDR_LOG";
 /// more "tidy" in releases. It can be customized via env variables. Mostly
 /// this means setting RENDR_LOG to one of:
 /// "OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"
-/// 
+///
 /// More fine-grained options can be found here:
 /// https://docs.rs/env_logger
 fn init_logger() {
@@ -61,6 +63,12 @@ fn run_app() -> Result<(), DynError> {
 
     if let Some(args) = matches.subcommand_matches("init") {
         init::init(args)?;
+    }
+    else if let Some(args) = matches.subcommand_matches("upgrade") {
+        upgrade::upgrade(args)?;
+    }
+    else if let Some(args) = matches.subcommand_matches("info") {
+        info::info(args)?;
     }
 
     Ok(())

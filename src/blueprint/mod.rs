@@ -163,8 +163,8 @@ impl Blueprint {
     }
 }
 
-#[derive(Serialize)]
-struct RendrConfig {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RendrConfig {
     name: String,
     version: u32,
     author: String,
@@ -173,8 +173,8 @@ struct RendrConfig {
     values: Vec<RendrConfigValue>,
 }
 
-#[derive(Serialize)]
-struct RendrConfigValue {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RendrConfigValue {
     name: String,
     value: String,
 }
@@ -200,6 +200,30 @@ impl RendrConfig {
             source: source,
             values: values,
         }
+    }
+
+    pub fn load(metadata_file: &PathBuf) -> Result<Option<RendrConfig>, DynError> {
+        let yaml = fs::read_to_string(metadata_file)?;
+        let config: RendrConfig = serde_yaml::from_str(&yaml)?;
+
+        Ok(Some(config))
+    }
+}
+
+impl Display for RendrConfig {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        writeln!(f, "name: {}", &self.name)?;
+        writeln!(f, "version: {}", &self.version)?;
+        writeln!(f, "description: {}", &self.description)?;
+        writeln!(f, "author: {}", &self.author)?;
+        writeln!(f, "source: {}", &self.source)?;
+        writeln!(f, "values:")?;
+        for v in self.values.iter() {
+            writeln!(f, "- name: {}", v.name);
+            writeln!(f, "  value: {}", v.value);
+        }
+
+        Ok(())
     }
 }
 

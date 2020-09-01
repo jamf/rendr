@@ -1,39 +1,55 @@
 name: rendr
 about: A project scaffolding tool
 settings:
-  - ArgRequiredElseHelp
-  - StrictUtf8
+- ArgRequiredElseHelp
+- StrictUtf8
 args:
 subcommands:
-  - init:
-      about: Initializes a project from a blueprint
-      args:
-        - blueprint:
-            short: b
-            long: blueprint
-            required: true
-            help: The location of the blueprint (a git repo or a local directory)
-            takes_value: true
-        - name:
-            required: true
-            help: The name of the project
-            takes_value: true
-        - dir:
-            short: d
-            long: dir
-            help: The output directory name
-            takes_value: true
-        - value:
-            short: v
-            long: value
-            help: Value(s) to render the blueprint with
-            takes_value: true
-            multiple: true
-        - git-init:
-            long: git-init
-            help: Initializes a Git repository in the rendered project
-            takes_value: false
-        - no-git-init:
-            long: no-git-init
-            help: Skips initializing Git repository in the rendered project
-            takes_value: false
+- info:
+    about: Displays blueprint info for this project
+    args:
+    - dir:
+        short: d
+        long: dir
+        help: The project directory path
+        takes_value: true
+- init:
+    about: Initializes a project from a blueprint
+    args:
+    - blueprint:
+        short: b
+        long: blueprint
+        required: true
+        help: The location of the blueprint (a git repo or a local directory)
+        takes_value: true
+    - name:
+        required: true
+        help: The name of the project
+        takes_value: true
+    - dir:
+        short: d
+        long: dir
+        help: The output directory name
+        takes_value: true
+    - value:
+        short: v
+        long: value
+        help: Value(s) to render the blueprint with
+        takes_value: true
+        multiple: true
+    - git-init:
+        long: git-init
+        help: Initializes a Git repository in the rendered project
+        takes_value: false
+    - no-git-init:
+        long: no-git-init
+        help: Skips initializing Git repository in the rendered project
+        takes_value: false
+- upgrade:
+    about: Upgrade an existing project to latest blueprint version
+    args:
+    - blueprint-version:
+        short: v
+        long: blueprint-version
+        help: The version of the blueprint to upgrade (defaults to latest)
+        takes_value: true
