@@ -2,6 +2,8 @@ mod source;
 mod values;
 
 use std::clone::Clone;
+use std::collections::HashMap;
+use std::env;
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -27,9 +29,9 @@ pub use values::Values;
 type DynError = Box<dyn Error>;
 
 pub struct Blueprint {
-    metadata: BlueprintMetadata,
-    source: Source,
-    post_script: Option<Script>,
+    pub metadata: BlueprintMetadata,
+    pub source: Source,
+    pub post_script: Option<Script>,
 }
 
 impl Blueprint {
@@ -162,12 +164,52 @@ impl Blueprint {
         }
 
         let source = self.source.to_string(output_dir);
+        self.generate_rendr_file(&source, &output_dir, &values)?;
 
-        debug!("Generating .rendr.yaml file:");
-        debug!("  source: {}", source);
-        debug!("  output_dir: {}", output_dir.display());
-        debug!("  values: {:?}", values);
-        self.generate_rendr_file(&source, &output_dir, values)?;
+        Ok(())
+    }
+
+    pub fn render_upgrade<TE: TemplatingEngine>(
+            &self,
+            engine: &TE,
+            values: &Values,
+            output_dir: &Path,
+            source: &str,
+    ) -> Result<(), DynError> {
+        info!("Upgrading to blueprint version {}", &self.metadata.version);
+        debug!("Root project dir {:?}", &output_dir);
+
+        for file in self.files() {
+            let file = file?;
+            let path = file.path();
+            let output_path = output_dir.join(file.path_from_template_root());
+
+            if path.is_file() {
+                if self.is_excluded(&file.path_from_template_root) {
+                    debug!("Copying {:?} to {:?} without templating.", &path, &output_path);
+                    fs::copy(path, output_path)?;
+                }
+                else if output_path.exists() {
+                    debug!("Skipping {:?}, file already exists", &path);
+                }
+                else {
+                    debug!("Using template {:?} to render {:?}", &path, &output_path);
+                    let contents = fs::read_to_string(&path)?;
+                    let contents = engine.render_template(&contents, values.clone())?;
+                    fs::write(output_path, &contents)?;
+                }
+            }
+            else if path.is_dir() {
+                if !output_path.is_dir() {
+                    debug!("Creating directory {:?}", &output_path);
+                    fs::create_dir(&output_path)?;
+                }
+            }
+        }
+
+        debug!("TODO: run upgrade script");
+
+        self.generate_rendr_file(&source, &output_dir, &values)?;
 
         Ok(())
     }
@@ -178,6 +220,10 @@ impl Blueprint {
         output_dir: &Path,
         values: &Values,
     ) -> Result<(), DynError> {
+        debug!("Generating .rendr.yaml file:");
+        debug!("  source: {}", source);
+        debug!("  output_dir: {}", output_dir.display());
+        debug!("  values: {:?}", values);
         let path = output_dir.join(Path::new(".rendr.yaml"));
         let config = RendrConfig::new(source.to_string().clone(), &self.metadata, values.clone());
         let yaml = serde_yaml::to_string(&config)?;
@@ -216,8 +262,8 @@ pub struct RendrConfig {
 
 #[derive(Serialize, Deserialize)]
 pub struct RendrConfigValue {
-    name: String,
-    value: String,
+    pub name: String,
+    pub value: String,
 }
 
 impl RendrConfig {
@@ -324,7 +370,7 @@ impl File {
     }
 }
 
-struct Script {
+pub struct Script {
     name: String,
     path: PathBuf,
 }
@@ -401,11 +447,11 @@ impl Display for Blueprint {
 }
 
 #[derive(Deserialize)]
-struct BlueprintMetadata {
-    name: String,
-    version: u32,
-    author: String,
-    description: String,
+pub struct BlueprintMetadata {
+    pub name: String,
+    pub version: u32,
+    pub author: String,
+    pub description: String,
     values: Vec<ValueSpec>,
     #[serde(default)]
     exclusions: Vec<Pattern>,

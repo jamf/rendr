@@ -1,5 +1,5 @@
 name: example-blueprint
-version: 1
+version: 2
 author: Brian S. <brian.stewart@jamf.com>, Tomasz K. <tomasz.kurcz@jamf.com>
 description: Just an example blueprint for `rendr`.
 exclusions:

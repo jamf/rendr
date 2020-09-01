@@ -95,3 +95,8 @@ subcommands:
           long: blueprint-version
           help: The version of the blueprint to upgrade (defaults to latest)
           takes_value: true
+      - dir:
+          short: d
+          long: dir
+          help: The project directory path
+          takes_value: true
