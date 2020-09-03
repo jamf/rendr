@@ -3,7 +3,6 @@ mod values;
 
 use std::clone::Clone;
 use std::collections::HashMap;
-use std::env;
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -264,6 +263,22 @@ pub struct RendrConfig {
 pub struct RendrConfigValue {
     pub name: String,
     pub value: String,
+}
+
+impl RendrConfigValue {
+    fn new(name: String, value: String) -> Self {
+        RendrConfigValue {
+            name,
+            value,
+        }
+    }
+
+    fn clone(&self) -> Self {
+        RendrConfigValue {
+            name: String::from(self.name.as_str()),
+            value: String::from(self.value.as_str()),
+        }
+    }
 }
 
 impl RendrConfig {
