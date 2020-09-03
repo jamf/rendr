@@ -1,19 +1,23 @@
 use std::collections::HashMap;
 use std::env;
 use std::error::Error;
+use std::io::{self, Write};
 use std::path::Path;
 use std::path::PathBuf;
 
 use clap::ArgMatches;
 use log::{info, debug, error};
+use text_io::read;
 
 use rendr::templating;
 use rendr::blueprint::Blueprint;
 use rendr::blueprint::RendrConfig;
+use rendr::blueprint::ValueSpec;
 
 type DynError = Box<dyn Error>;
 
 pub fn upgrade(args: &ArgMatches) -> Result<(), DynError> {
+    // TODO this variable is not yet used, the upgrade target must always be the latest
     let blueprint_version = args.value_of("blueprint-version").unwrap_or("latest");
     let working_dir = match env::current_dir() {
         Ok(dir) => dir,
@@ -48,11 +52,43 @@ pub fn upgrade(args: &ArgMatches) -> Result<(), DynError> {
 
     println!("Upgrading project from blueprint version {}", blueprint.metadata.version);
 
-    // Parse values, same as init
-    let mut values: HashMap<&str, &str> = blueprint.default_values()
-                                                   .collect();
+    // Initialize values with blueprint defaults
+    let mut values: HashMap<&str, &str> = blueprint.default_values().collect();
 
-    // Prompt for missing values
+    // Add values from original project generation
+    let config_values: HashMap<&str, &str> = config.values.iter()
+        .map(|v| (v.name.as_str(), v.value.as_str()))
+        .collect();
+    values.extend(config_values);
+
+    // If some values were provided via CLI arguments, merge those in
+    if let Some(cli_values) = args.values_of("value") {
+        let cli_values: Result<Vec<_>, _> = cli_values.map(parse_value).collect();
+        values.extend(cli_values?);
+    }
+
+    // Figure out which required values are still missing
+    let missing_values = blueprint.required_values()
+        .filter(|v| values.get::<str>(&v.name).is_none());
+
+    // Prompt for the missing values and collect them
+    let prompt_values_owned: Vec<_> = prompt_for_values(missing_values).collect();
+
+    // Merge the values from prompts in
+    let prompt_values: Vec<_> = prompt_values_owned.iter()
+        .map(|(k, v)| (*k, v.as_str()))
+        .collect();
+    values.extend(prompt_values);
+
+    // Update the target version, inserting if it does not exist for some reason
+    let target_version = blueprint.metadata.version.to_string();
+    let v = values.entry("version").or_insert(target_version.as_str());
+    *v = target_version.as_str();
+
+    debug!("Rendering blueprint with values:");
+    for (k, v) in values.clone() {
+        debug!("- {}: {}", k, v);
+    }
 
     // Render new templates
     let mustache = templating::Mustache::new();
@@ -74,3 +110,27 @@ fn load_rendr_config(dir: &Path) -> Result<RendrConfig, DynError> {
         Err(e) => Err(e),
     }
 }
+
+// TODO move this code to a common spot, copied from init.rs
+type ValueFromPrompt<'s> = (&'s str, String);
+
+fn prompt_for_values<'s>(values: impl Iterator<Item = &'s ValueSpec>) -> impl Iterator<Item = ValueFromPrompt<'s>> {
+    values.map(prompt_for_value)
+}
+
+fn prompt_for_value(value: &ValueSpec) -> ValueFromPrompt<'_> {
+    print!("{}: ", value.description);
+    io::stdout().flush().unwrap();
+    (&value.name, read!("{}\n"))
+}
+
+fn parse_value(s: &str) -> Result<(&str, &str), String> {
+    let pos = s.find(":")
+        .ok_or(format!("Invalid value `{}`", s))?;
+
+    let mut result = s.split_at(pos);
+    result.1 = &result.1[1..];
+
+    Ok((result.0, result.1))
+}
+

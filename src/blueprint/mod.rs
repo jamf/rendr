@@ -1,7 +1,6 @@
 mod source;
 
 use std::collections::HashMap;
-use std::env;
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -229,6 +228,13 @@ impl RendrConfigValue {
         RendrConfigValue {
             name,
             value,
+        }
+    }
+
+    fn clone(&self) -> Self {
+        RendrConfigValue {
+            name: String::from(self.name.as_str()),
+            value: String::from(self.value.as_str()),
         }
     }
 }
