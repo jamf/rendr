@@ -3,10 +3,9 @@ use std::env;
 use std::error::Error;
 use std::io::{self, Write};
 use std::path::Path;
-use std::path::PathBuf;
 
 use clap::ArgMatches;
-use log::{info, debug, error};
+use log::{debug, error};
 use text_io::read;
 
 use rendr::templating;
@@ -18,6 +17,8 @@ type DynError = Box<dyn Error>;
 
 pub fn upgrade(args: &ArgMatches) -> Result<(), DynError> {
     // TODO this variable is not yet used, the upgrade target must always be the latest
+    let dry_run = args.is_present("dry-run");
+    debug!("Upgrade dry run mode: {}", dry_run);
     let blueprint_version = args.value_of("blueprint-version").unwrap_or("latest");
     let working_dir = match env::current_dir() {
         Ok(dir) => dir,
@@ -33,8 +34,8 @@ pub fn upgrade(args: &ArgMatches) -> Result<(), DynError> {
     // Attempt to read the provided blueprint
     let relative_source = dir.join(&config.source);
     let blueprint = match relative_source.exists() {
-        true =>  Blueprint::new(relative_source.to_str().unwrap())?,
-        false => Blueprint::new(config.source.as_str())?,
+        true =>  Blueprint::new(relative_source.to_str().unwrap(), None)?,
+        false => Blueprint::new(config.source.as_str(), None)?,
     };
 
     println!("{}", blueprint);
@@ -53,12 +54,10 @@ pub fn upgrade(args: &ArgMatches) -> Result<(), DynError> {
     println!("Upgrading project from blueprint version {}", blueprint.metadata.version);
 
     // Initialize values with blueprint defaults
-    let mut values: HashMap<&str, &str> = blueprint.default_values().collect();
+    let mut values: HashMap<_, _> = blueprint.default_values().collect();
 
     // Add values from original project generation
-    let config_values: HashMap<&str, &str> = config.values.iter()
-        .map(|v| (v.name.as_str(), v.value.as_str()))
-        .collect();
+    let config_values: HashMap<&str, &str> = config.values().map_str();
     values.extend(config_values);
 
     // If some values were provided via CLI arguments, merge those in
@@ -92,7 +91,7 @@ pub fn upgrade(args: &ArgMatches) -> Result<(), DynError> {
 
     // Render new templates
     let mustache = templating::Mustache::new();
-    blueprint.render_upgrade(&mustache, &values, &dir, &config.source);
+    blueprint.render_upgrade(&mustache, &values.into(), &dir, &config.source)?;
 
     Ok(())
 }

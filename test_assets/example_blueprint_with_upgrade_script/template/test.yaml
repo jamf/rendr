@@ -1,0 +1,5 @@
+project:
+  name: {{ name }}
+  version: {{ version }}
+  stuff: foobar
+  extra: {{ extra_info }}

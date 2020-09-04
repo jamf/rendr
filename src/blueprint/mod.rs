@@ -2,7 +2,6 @@ mod source;
 mod values;
 
 use std::clone::Clone;
-use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -60,12 +59,12 @@ impl Blueprint {
     }
 
     fn find_scripts(&mut self) -> Result<(), BlueprintInitError> {
-        self.post_script = self.find_script("post-render")?;
+        self.post_script = self.find_script("post-render.sh")?;
 
         Ok(())
     }
 
-    fn find_script(&mut self, script: &str) -> Result<Option<Script>, BlueprintInitError> {
+    fn find_script(&self, script: &str) -> Result<Option<Script>, BlueprintInitError> {
         let mut script_path = PathBuf::new();
         script_path.push(
             self.source
@@ -74,7 +73,7 @@ impl Blueprint {
                 .map_err(|e| BlueprintInitError::ScriptLookupError(e))?,
         );
         script_path.push("scripts");
-        script_path.push(format!("{}.sh", script));
+        script_path.push(format!("{}", script));
 
         if !script_path.exists() {
             debug!(
@@ -206,8 +205,8 @@ impl Blueprint {
             }
         }
 
-        debug!("TODO: run upgrade script");
-
+        let scripts = self.get_upgrade_scripts();
+        self.run_upgrade_scripts(scripts, output_dir, values)?;
         self.generate_rendr_file(&source, &output_dir, &values)?;
 
         Ok(())
@@ -229,6 +228,29 @@ impl Blueprint {
         let mut file = std::fs::File::create(path)?;
 
         file.write_all(yaml.as_bytes())?;
+
+        Ok(())
+    }
+
+    pub fn get_upgrade_scripts(&self) -> Vec<&UpgradeSpec> {
+        self.metadata.upgrades.iter()
+            .filter(|it| it.version == self.metadata.version)
+            .collect()
+    }
+
+    fn run_upgrade_scripts(&self, scripts: Vec<&UpgradeSpec>, output_dir: &Path, values: &Values) -> Result<(), DynError> {
+        let target_version = self.metadata.version;
+        debug!("Running {} upgrade script(s) for version {}", scripts.len(), target_version);
+
+        for script in scripts {
+            if script.version == target_version {
+                if let Some(mut s) = self.find_script(&script.script).unwrap() {
+                    s.executable = Some(String::from(&script.executable));
+                    println!("Running upgrade script: {}", s.name);
+                    s.run(output_dir, values)?;
+                }
+            }
+        }
 
         Ok(())
     }
@@ -386,6 +408,7 @@ impl File {
 }
 
 pub struct Script {
+    executable: Option<String>,
     name: String,
     path: PathBuf,
 }
@@ -393,6 +416,7 @@ pub struct Script {
 impl Script {
     fn new(name: &str, path: PathBuf) -> Self {
         Script {
+            executable: None,
             name: name.to_string(),
             path: path,
         }
@@ -402,12 +426,18 @@ impl Script {
         info!("Running blueprint script: {}", &self.name);
 
         #[cfg(debug)]
+        debug!("  Blueprint script executable: {:?}", &self.executable);
         debug!("  Blueprint script full path: {:?}", &self.path);
         debug!("  Blueprint script working dir: {:?}", working_dir);
 
+        let command = match &self.executable {
+            Some(executable) => format!("{} {}", executable, &self.path.display()),
+            None => format!("{}", &self.path.display()),
+        };
+
         let output = Command::new("sh")
             .arg("-c")
-            .arg(&self.path)
+            .arg(command)
             .envs(values.map())
             .current_dir(working_dir)
             .stdout(Stdio::inherit())
@@ -473,6 +503,8 @@ pub struct BlueprintMetadata {
     #[serde(alias = "git-init")]
     #[serde(default)]
     git_init: bool,
+    #[serde(default)]
+    upgrades: Vec<UpgradeSpec>,
 }
 
 #[derive(Deserialize)]
@@ -482,6 +514,13 @@ pub struct ValueSpec {
     pub default: Option<String>,
     #[serde(default)]
     pub required: bool,
+}
+
+#[derive(Deserialize)]
+pub struct UpgradeSpec {
+    pub version: u32,
+    pub script: String,
+    pub executable: String,
 }
 
 impl PartialEq for ValueSpec {

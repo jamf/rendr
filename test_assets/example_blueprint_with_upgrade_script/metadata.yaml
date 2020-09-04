@@ -1,0 +1,25 @@
+name: example-blueprint
+version: 2
+author: Brian S. <brian.stewart@jamf.com>, Tomasz K. <tomasz.kurcz@jamf.com>
+description: Just an example blueprint for `rendr`.
+exclusions:
+- "foo/non_existent_excluded_file"
+- "excluded_file"
+- "excluded_files/*"
+git-init: true
+values:
+- name: name
+  description: The name of your project
+  required: true
+- name: version
+  description: The version of your project
+  default: 1
+- name: extra_info
+  description: This isn't really needed
+upgrades:
+- version: 2
+  script: upgrade-v2.groovy
+  executable: rendr-sdk-groovy
+- version: 3
+  script: upgrade-v3.groovy
+  executable: rendr-sdk-groovy
