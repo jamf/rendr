@@ -58,3 +58,7 @@ subcommands:
         long: dir
         help: The project directory path
         takes_value: true
+    - dry-run:
+        long: dry-run
+        help: Upgrade dry-run, no modifications made
+        takes_value: false
