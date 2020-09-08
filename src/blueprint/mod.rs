@@ -430,11 +430,16 @@ impl Script {
         debug!("  Blueprint script full path: {:?}", &self.path);
         debug!("  Blueprint script working dir: {:?}", working_dir);
 
+        let values_flags = values.iter()
+            .map(|i| format!("--value {}={}", i.0, i.1))
+            .collect::<Vec<String>>()
+            .join(" ");
         let command = match &self.executable {
-            Some(executable) => format!("{} {}", executable, &self.path.display()),
+            Some(executable) => format!("{} {} {}", executable, &self.path.display(), values_flags),
             None => format!("{}", &self.path.display()),
         };
 
+        debug!("  Executing command: {}", command);
         let output = Command::new("sh")
             .arg("-c")
             .arg(command)
