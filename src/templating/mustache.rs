@@ -14,10 +14,10 @@ impl Mustache {
 }
 
 impl TemplatingEngine for Mustache {
-    fn render_template<'v>(&self, template: &str, values: impl AsRef<Values<'v>>) -> Result<String, RenderError> {
+    fn render_template(&self, template: &str, values: Values) -> Result<String, RenderError> {
         let template = mustache::compile_str(template)?;
 
-        Ok(template.render_to_string(values.as_ref().map())?)
+        Ok(template.render_to_string(&values)?)
     }
 }
 

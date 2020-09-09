@@ -110,7 +110,7 @@ impl Blueprint {
     pub fn render<'s, TE: TemplatingEngine>(
             &self,
             engine: &TE,
-            values: impl AsRef<Values<'s>> + std::fmt::Debug,
+            values: &Values,
             output_dir: &Path,
     ) -> Result<(), DynError> {
         // Create our output directory if it doesn't exist yet.
@@ -136,7 +136,7 @@ impl Blueprint {
                 } else {
                     debug!("Using template {:?} to render {:?}", &path, &output_path);
                     let contents = fs::read_to_string(&path)?;
-                    let contents = engine.render_template(&contents, &values)?;
+                    let contents = engine.render_template(&contents, values.clone())?;
                     fs::write(output_path, &contents)?;
                 }
             } else if path.is_dir() {
@@ -157,14 +157,14 @@ impl Blueprint {
         debug!("  source: {}", source);
         debug!("  output_dir: {}", output_dir.display());
         debug!("  values: {:?}", values);
-        self.generate_rendr_file(&source, &output_dir, &values)?;
+        self.generate_rendr_file(&source, &output_dir, values)?;
 
         Ok(())
     }
 
-    fn generate_rendr_file<'s>(&self, source: &str, output_dir: &Path, values: impl AsRef<Values<'s>>) -> Result<(), DynError> {
+    fn generate_rendr_file<'s>(&self, source: &str, output_dir: &Path, values: &Values) -> Result<(), DynError> {
         let path = output_dir.join(Path::new(".rendr.yaml"));
-        let config = RendrConfig::new(source.to_string().clone(), &self.metadata, values.as_ref().clone());
+        let config = RendrConfig::new(source.to_string().clone(), &self.metadata, values.clone());
         let yaml = serde_yaml::to_string(&config)?;
         let mut file = std::fs::File::create(path)?;
 
@@ -175,14 +175,13 @@ impl Blueprint {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct RendrConfig<'v> {
+pub struct RendrConfig {
     name: String,
     version: u32,
     author: String,
     description: String,
     source: String,
-    #[serde(borrow)]
-    values: Values<'v>,
+    values: Values,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -191,21 +190,15 @@ pub struct RendrConfigValue {
     value: String,
 }
 
-impl RendrConfigValue {
-    fn new(name: String, value: String) -> Self {
-        RendrConfigValue { name, value }
-    }
-}
-
-impl<'v> RendrConfig<'v> {
-    fn new(source: String, metadata: &BlueprintMetadata, values: impl Into<Values<'v>> + 'v) -> Self {
+impl RendrConfig {
+    fn new(source: String, metadata: &BlueprintMetadata, values: Values) -> Self {
         RendrConfig {
             name: metadata.name.clone(),
             version: metadata.version,
             author: metadata.author.clone(),
             description: metadata.description.clone(),
             source,
-            values: values.into(),
+            values: values,
         }
     }
 }
@@ -282,7 +275,7 @@ impl Script {
         }
     }
 
-    fn run<'v>(&self, working_dir: &Path, values: impl AsRef<Values<'v>>) -> Result<(), DynError> {
+    fn run<'v>(&self, working_dir: &Path, values: &Values) -> Result<(), DynError> {
         info!("Running blueprint script: {}", &self.name);
 
         #[cfg(debug)]
@@ -292,7 +285,7 @@ impl Script {
         let output = Command::new("sh")
             .arg("-c")
             .arg(&self.path)
-            .envs(values.as_ref().map())
+            .envs(values.map())
             .current_dir(working_dir)
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
@@ -488,8 +481,7 @@ mod tests {
             PathBuf::from("test_assets/scripts/hello_world.sh"),
         );
 
-        let values = HashMap::new();
-        script.run(Path::new("."), &values).unwrap();
+        script.run(Path::new("."), &Values::new()).unwrap();
     }
 
     #[test]
@@ -499,8 +491,7 @@ mod tests {
             PathBuf::from("test_assets/scripts/failing.sh"),
         );
 
-        let values = HashMap::new();
-        if let Ok(()) = script.run(Path::new("."), &values) {
+        if let Ok(()) = script.run(Path::new("."), &Values::new()) {
             panic!("The failing script didn't cause an error!");
         }
     }
@@ -523,14 +514,11 @@ mod tests {
     }
 
     // Test helpers
-    fn test_values() -> HashMap<&'static str, &'static str> {
-        vec![
-            ("name", "my-project"),
-            ("version", "1"),
-            ("foobar", "stuff"),
-        ]
-        .iter()
-        .cloned()
-        .collect()
+    fn test_values() -> Values {
+        vec![("name", "my-project"), ("version", "1"), ("foobar", "stuff")]
+            .iter()
+            .cloned()
+            .collect::<HashMap<_, _>>()
+            .into()
     }
 }

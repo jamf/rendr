@@ -13,10 +13,10 @@ use std::fmt::Formatter;
 
 /// The trait for integrating templating engines.
 pub trait TemplatingEngine {
-    fn render_template<'v>(
+    fn render_template(
         &self,
         template: &str,
-        values: impl AsRef<Values<'v>>,
+        values: Values,
     ) -> Result<String, RenderError>;
 }
 

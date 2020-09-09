@@ -67,8 +67,7 @@ impl<'a> Template<'a> {
         }
     }
 
-    fn render_to_string<'v>(&self, values: impl AsRef<Values<'v>>) -> Result<String, RenderError> {
-        let values = values.as_ref();
+    fn render_to_string(&self, values: &Values) -> Result<String, RenderError> {
         let mut result = String::new();
 
         // TODO: Is there a DRYer way to write this?
@@ -124,15 +123,13 @@ impl<'a> Template<'a> {
         Regex::from_str(&regex_str).unwrap()
     }
 
-    fn validate_generated_output<'v>(&self, values: impl AsRef<Values<'v>>, output: &str) -> bool {
-        let regex = self.regex(values.as_ref());
+    fn validate_generated_output(&self, values: &Values, output: &str) -> bool {
+        let regex = self.regex(values);
 
         regex.is_match(output)
     }
 
-    fn upgrade_to<'v>(&self, new_template: &Template, values: impl AsRef<Values<'v>>, output: &str) -> String {
-        let values = values.as_ref();
-
+    fn upgrade_to(&self, new_template: &Template, values: &Values, output: &str) -> String {
         let regex = self.regex(values);
 
         let caps = regex.captures(output).unwrap();
@@ -164,10 +161,10 @@ impl Tmplpp {
 }
 
 impl TemplatingEngine for Tmplpp {
-    fn render_template<'v>(&self, template_str: &str, values: impl AsRef<Values<'v>>) -> Result<String, RenderError> {
+    fn render_template<'v>(&self, template_str: &str, values: Values) -> Result<String, RenderError> {
         let template = Template::from_str(template_str)?;
 
-        Ok(template.render_to_string(values)?)
+        Ok(template.render_to_string(&values)?)
     }
 }
 
@@ -321,21 +318,21 @@ fn attempt_parsing_invalid_template_fails() {
 fn render_empty_template() {
     let template = Template::from_str("").unwrap();
 
-    assert_eq!(template.render_to_string(&HashMap::new()).unwrap(), "");
+    assert_eq!(template.render_to_string(&Values::new()).unwrap(), "");
 }
 
 #[test]
 fn render_raw_text() {
     let template = Template::from_str("All mimsy were the borogoves.").unwrap();
 
-    assert_eq!(template.render_to_string(&HashMap::new()).unwrap(), "All mimsy were the borogoves.");
+    assert_eq!(template.render_to_string(&Values::new()).unwrap(), "All mimsy were the borogoves.");
 }
 
 #[test]
 fn render_empty_var() {
     let template = Template::from_str("All mimsy were {{ foo }} borogoves.").unwrap();
 
-    assert_eq!(template.render_to_string(&HashMap::new()).unwrap(), "All mimsy were  borogoves.");
+    assert_eq!(template.render_to_string(&Values::new()).unwrap(), "All mimsy were  borogoves.");
 }
 
 #[test]
@@ -346,6 +343,7 @@ fn render_single_var() {
         template.render_to_string(&[("foo", "the")].iter()
             .cloned()
             .collect::<HashMap<_, _>>()
+            .into()
         ).unwrap(),
         "All mimsy were the borogoves.",
     );
@@ -356,7 +354,7 @@ fn render_editable_block() {
     let template = Template::from_str("All mimsy were {{@ foo }}the{{@ / }} borogoves.").unwrap();
 
     assert_eq!(
-        template.render_to_string(&HashMap::new()).unwrap(),
+        template.render_to_string(&Values::new()).unwrap(),
         "All mimsy were the borogoves.",
     );
 }
@@ -369,6 +367,7 @@ fn render_editable_block_with_vars_inside() {
         template.render_to_string(&[("bar", "were")].iter()
             .cloned()
             .collect::<HashMap<_, _>>()
+            .into()
         ).unwrap(),
         "All mimsy were the borogoves.",
     );
@@ -380,26 +379,27 @@ fn render_editable_block_with_vars_inside() {
 fn validate_simple_text() {
     let template = Template::from_str("All mimsy were the borogoves.").unwrap();
 
-    assert!(template.validate_generated_output(&HashMap::new(), "All mimsy were the borogoves."));
-    assert!(!template.validate_generated_output(&HashMap::new(), "All mimsy were the borogoves. "));
+    assert!(template.validate_generated_output(&Values::new(), "All mimsy were the borogoves."));
+    assert!(!template.validate_generated_output(&Values::new(), "All mimsy were the borogoves. "));
 }
 
 #[test]
 fn validate_simple_text_with_newlines() {
     let template = Template::from_str("All mimsy\nwere the borogoves.").unwrap();
 
-    assert!(template.validate_generated_output(&HashMap::new(), "All mimsy\nwere the borogoves."));
-    assert!(!template.validate_generated_output(&HashMap::new(), "All mimsy\nwere the borogoves. "));
-    assert!(!template.validate_generated_output(&HashMap::new(), "All mimsy\nwere the borogoves.\nAll mimsy\nwere the borogoves."));
+    assert!(template.validate_generated_output(&Values::new(), "All mimsy\nwere the borogoves."));
+    assert!(!template.validate_generated_output(&Values::new(), "All mimsy\nwere the borogoves. "));
+    assert!(!template.validate_generated_output(&Values::new(), "All mimsy\nwere the borogoves.\nAll mimsy\nwere the borogoves."));
 }
 
 #[test]
 fn validate_output_with_vars() {
     let template = Template::from_str("All mimsy {{ foo }} the borogoves.").unwrap();
 
-    let values: HashMap<_, _> = [("foo", "were")].iter()
+    let values: Values = [("foo", "were")].iter()
         .cloned()
-        .collect();
+        .collect::<HashMap<_, _>>()
+        .into();
 
     assert!(template.validate_generated_output(&values, "All mimsy were the borogoves."));
     assert!(!template.validate_generated_output(&values, "All mimsy was the borogoves."));
@@ -409,14 +409,12 @@ fn validate_output_with_vars() {
 fn validate_output_with_an_editable() {
     let template = Template::from_str("All mimsy {{@ foo }}were{{@/}} the borogoves.").unwrap();
 
-    let values = HashMap::new();
-
-    assert!(template.validate_generated_output(&values, "All mimsy were the borogoves."));
+    assert!(template.validate_generated_output(&Values::new(), "All mimsy were the borogoves."));
     // We're allowed to edit the text inside the editable...
-    assert!(template.validate_generated_output(&values, "All mimsy was the borogoves."));
-    assert!(template.validate_generated_output(&values, "All mimsy asd fsd sdf the borogoves."));
+    assert!(template.validate_generated_output(&Values::new(), "All mimsy was the borogoves."));
+    assert!(template.validate_generated_output(&Values::new(), "All mimsy asd fsd sdf the borogoves."));
     // ...but we shouldn't edit the text outside of the editable.
-    assert!(!template.validate_generated_output(&values, "All mimsy were the borogoves. Stuff."));
+    assert!(!template.validate_generated_output(&Values::new(), "All mimsy were the borogoves. Stuff."));
 }
 
 // Upgrade tests
@@ -426,13 +424,11 @@ fn upgrade_output_with_simple_text() {
     let v1 = Template::from_str("All mimsy were the borogoves.").unwrap();
     let v2 = Template::from_str("All mimsy were my borogoves.").unwrap();
 
-    let values = HashMap::new();
-
-    let output = v1.render_to_string(&values).unwrap();
+    let output = v1.render_to_string(&Values::new()).unwrap();
 
     assert_eq!(output, "All mimsy were the borogoves.");
 
-    let new_output = v1.upgrade_to(&v2, &values, &output);
+    let new_output = v1.upgrade_to(&v2, &Values::new(), &output);
 
     assert_eq!(new_output, "All mimsy were my borogoves.");
 }
@@ -442,9 +438,10 @@ fn upgrade_output_with_vars() {
     let v1 = Template::from_str("All mimsy {{ foo }} the borogoves.").unwrap();
     let v2 = Template::from_str("All mimsy {{ foo }} my borogoves.").unwrap();
 
-    let values: HashMap<_, _> = [("foo", "were")].iter()
+    let values: Values = [("foo", "were")].iter()
         .cloned()
-        .collect();
+        .collect::<HashMap<_, _>>()
+        .into();
 
     let output = v1.render_to_string(&values).unwrap();
 
@@ -460,11 +457,9 @@ fn upgrade_output_with_an_editable() {
     let v1 = Template::from_str("All mimsy {{@ foo }}were{{@/}} the borogoves.").unwrap();
     let v2 = Template::from_str("All mimsy {{@ foo }}were{{@/}} my borogoves.").unwrap();
 
-    let values = HashMap::new();
-
     let modified_output = "All mimsy bla bla bla the borogoves.";
 
-    let new_output = v1.upgrade_to(&v2, &values, modified_output);
+    let new_output = v1.upgrade_to(&v2, &Values::new(), modified_output);
 
     assert_eq!(new_output, "All mimsy bla bla bla my borogoves.");
 }
@@ -500,8 +495,6 @@ def main():
 "#)
         .unwrap();
 
-    let values = HashMap::new();
-
     let modified_output = r#"
 import math
 // User-defined imports go after this line.
@@ -530,5 +523,5 @@ import this
 import that
 "#;
 
-    assert_eq!(v1.upgrade_to(&v2, &values, modified_output), expected_output_after_upgrade);
+    assert_eq!(v1.upgrade_to(&v2, &Values::new(), modified_output), expected_output_after_upgrade);
 }

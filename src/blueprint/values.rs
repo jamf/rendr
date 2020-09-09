@@ -5,47 +5,51 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(transparent)]
-pub struct Values<'s> {
-    #[serde(flatten, borrow)]
-    inner: HashMap<&'s str, &'s str>,
+pub struct Values {
+    #[serde(flatten)]
+    inner: HashMap<String, String>,
 }
 
-impl Values<'_> {
-    pub fn iter(&self) -> hash_map::Iter<&str, &str> {
-        self.inner.iter()
+impl Values {
+    pub fn new() -> Self {
+        Values {
+            inner: HashMap::new(),
+        }
     }
 
-    pub fn get(&self, k: &str) -> Option<&&str> {
+    pub fn iter(&self) -> impl Iterator<Item=(&str, &str)> {
+        self.inner.iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+    }
+
+    pub fn get(&self, k: &str) -> Option<&String> {
         self.inner.get(k)
     }
 
-    pub fn map(&self) -> &HashMap<&str, &str> {
+    pub fn map(&self) -> &HashMap<String, String> {
         &self.inner
     }
 }
 
-impl<'s> From<HashMap<&'s str, &'s str>> for Values<'s> {
-    fn from(h: HashMap<&'s str, &'s str>) -> Self {
+impl From<HashMap<String, String>> for Values {
+    fn from(h: HashMap<String, String>) -> Self {
         Self {
             inner: h,
         }
     }
 }
 
-// Because a Rust codebase without an unsafe block is kind of dull. Right?
-// ...right?
-impl<'s> AsRef<Values<'s>> for HashMap<&'s str, &'s str> {
-    fn as_ref(&self) -> &Values<'s> {
-        unsafe {
-            &*(self as *const Self as *const Values<'s>)
-        }
-    }
-}
-
-impl<'s> AsRef<HashMap<&'s str, &'s str>> for Values<'s> {
-    fn as_ref(&self) -> &HashMap<&'s str, &'s str> {
-        unsafe {
-            &*(self as *const Self as *const HashMap<&'s str, &'s str>)
+// This kind of implicit cloning of all those strings probably isn't great, but it's mostly intended for convenience
+// when writing tests.
+//
+// If this ends up in develop, maybe we should think about Values wrapping a HashCow?
+// https://github.com/purpleprotocol/hashcow
+impl From<HashMap<&str, &str>> for Values {
+    fn from(h: HashMap<&str, &str>) -> Self {
+        Self {
+            inner: h.into_iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
         }
     }
 }

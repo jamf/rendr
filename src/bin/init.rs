@@ -120,7 +120,7 @@ fn init_scaffold(
 
     let engine = templating::Tmplpp::new();
 
-    blueprint.render(&engine, &values, &output_dir)?;
+    blueprint.render(&engine, &values.into(), &output_dir)?;
 
     if args.is_present("git-init")
         || (blueprint.is_git_init_enabled() && !args.is_present("no-git-init"))
