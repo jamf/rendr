@@ -25,7 +25,7 @@ enum Element<'a> {
 }
 
 #[derive(Debug)]
-struct Template<'a> {
+pub struct Template<'a> {
     elements: Vec<Element<'a>>,
 }
 
@@ -118,18 +118,17 @@ impl<'a> Template<'a> {
         }
 
         regex_str.push_str("$");
-        println!("{}", regex_str);
 
         Regex::from_str(&regex_str).unwrap()
     }
 
-    fn validate_generated_output(&self, values: &Values, output: &str) -> bool {
+    pub fn validate_generated_output(&self, values: &Values, output: &str) -> bool {
         let regex = self.regex(values);
 
         regex.is_match(output)
     }
 
-    fn upgrade_to(&self, new_template: &Template, values: &Values, output: &str) -> String {
+    pub fn upgrade_to(&self, new_template: &Template, values: &Values, output: &str) -> String {
         let regex = self.regex(values);
 
         let caps = regex.captures(output).unwrap();

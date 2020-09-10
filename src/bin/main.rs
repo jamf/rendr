@@ -1,4 +1,5 @@
 mod init;
+mod check;
 
 use std::env;
 use std::error::Error;
@@ -61,8 +62,10 @@ fn run_app() -> Result<(), DynError> {
     let yaml = load_yaml!("cli.yml");
     let matches = App::from_yaml(yaml).version(crate_version!()).get_matches();
 
-    if let Some(args) = matches.subcommand_matches("init") {
-        init::init(args)?;
+    match matches.subcommand() {
+        ("init",  Some(args)) => init::init(args)?,
+        ("check", Some(args)) => check::check(args)?,
+        _                     => panic!("unknown subcommand"),
     }
 
     Ok(())

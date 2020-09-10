@@ -94,14 +94,13 @@ impl Blueprint {
         self.values().filter(|v| v.required)
     }
 
-    fn files(&self) -> impl Iterator<Item = Result<File, walkdir::Error>> {
+    pub fn files(&self) -> impl Iterator<Item=Result<File, walkdir::Error>> {
         let template_root = self.source.path().join("template");
         Files::new(&template_root)
     }
 
-    fn is_excluded<P: AsRef<Path>>(&self, file: P) -> bool {
-        self.metadata
-            .exclusions
+    pub fn is_excluded<P: AsRef<Path>>(&self, file: P) -> bool {
+        self.metadata.exclusions
             .iter()
             .find(|pattern| pattern.matches_path(file.as_ref()))
             .is_some()
@@ -176,11 +175,11 @@ impl Blueprint {
 
 #[derive(Serialize, Deserialize)]
 pub struct RendrConfig {
-    name: String,
-    version: u32,
-    author: String,
-    description: String,
-    source: String,
+    pub name: String,
+    pub version: u32,
+    pub author: String,
+    pub description: String,
+    pub source: String,
     values: Values,
 }
 
@@ -200,6 +199,14 @@ impl RendrConfig {
             source,
             values: values,
         }
+    }
+
+    pub fn values(&self) -> &Values {
+        &self.values
+    }
+
+    pub fn blueprint(&self) -> Result<Blueprint, DynError> {
+        Blueprint::new(&self.source)
     }
 }
 
@@ -253,11 +260,11 @@ impl File {
         }
     }
 
-    fn path(&self) -> &Path {
+    pub fn path(&self) -> &Path {
         self.dir_entry.path()
     }
 
-    fn path_from_template_root(&self) -> &Path {
+    pub fn path_from_template_root(&self) -> &Path {
         &self.path_from_template_root
     }
 }

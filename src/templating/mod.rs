@@ -2,7 +2,7 @@
 //! and values to templating engines. It abstracts rendering those away.
 
 mod mustache;
-mod tmplpp;
+pub mod tmplpp;
 pub use self::mustache::Mustache;
 pub use self::tmplpp::Tmplpp;
 
