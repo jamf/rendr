@@ -1,16 +1,11 @@
-use std::collections::HashMap;
 use std::error::Error;
-use std::io::{self, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use clap::ArgMatches;
-use git2::{Oid, Repository, IndexAddOption, Signature};
-use log::{info, debug};
-use text_io::read;
 use thiserror::Error;
 
-use rendr::templating::{Tmplpp, tmplpp::Template};
-use rendr::blueprint::{Blueprint, ValueSpec};
+use rendr::templating::{tmplpp::Template};
+use rendr::blueprint::{Blueprint};
 use rendr::project::Project;
 
 type DynError = Box<dyn Error>;
