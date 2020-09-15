@@ -53,3 +53,13 @@ impl From<HashMap<&str, &str>> for Values {
         }
     }
 }
+
+impl From<&HashMap<&str, &str>> for Values {
+    fn from(h: &HashMap<&str, &str>) -> Self {
+        Self {
+            inner: h.into_iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
+        }
+    }
+}

@@ -1,10 +1,11 @@
-use std::error::Error;
 use std::path::{Path, PathBuf};
 
 use git2::RemoteCallbacks;
 use tempdir::TempDir;
+use git2::Repository;
+use thiserror::Error;
 
-type DynError = Box<dyn Error>;
+// type DynError = Box<dyn Error>;
 
 pub enum Source {
     Local(PathBuf),
@@ -12,21 +13,27 @@ pub enum Source {
 }
 
 impl Source {
-    pub fn new(source: &str, callbacks: Option<RemoteCallbacks>) -> Result<Self, DynError> {
+    pub fn new(source: &str, callbacks: Option<RemoteCallbacks>) -> Result<Self, BlueprintSourceError> {
         let path = Path::new(source);
 
         if path.exists() {
             return Ok(Self::local(path)?);
         }
-        Ok(Self::remote(source, callbacks)?)
+
+        Self::remote(source, callbacks)
     }
 
-    fn local(path: impl AsRef<Path>) -> Result<Self, DynError> {
-        Ok(Source::Local(path.as_ref().canonicalize()?))
+    fn local(path: impl AsRef<Path>) -> Result<Self, BlueprintSourceError> {
+        Ok(Source::Local(
+            path.as_ref()
+                .canonicalize()
+                .map_err(|e| BlueprintSourceError::LocalReadError(e))?
+        ))
     }
 
-    fn remote(url: &str, callbacks: Option<RemoteCallbacks>) -> Result<Self, DynError> {
-        let dir = TempDir::new("checked_out_blueprint")?;
+    fn remote(url: &str, callbacks: Option<RemoteCallbacks>) -> Result<Self, BlueprintSourceError> {
+        let dir = TempDir::new("checked_out_blueprint")
+            .map_err(|e| BlueprintSourceError::TempDirCreationError(e))?;
 
         // Prepare fetch options.
         let mut fo = git2::FetchOptions::new();
@@ -90,6 +97,18 @@ impl RemoteSource {
     fn url(&self) -> &str {
         &self.url
     }
+}
+
+#[derive(Error, Debug)]
+pub enum BlueprintSourceError {
+    #[error("failed to read the local blueprint")]
+    LocalReadError(#[source] std::io::Error),
+
+    #[error("failed to create a temporary directory")]
+    TempDirCreationError(#[source] std::io::Error),
+
+    #[error("failed to clone the git repository")]
+    RepoCloneError(#[from] git2::Error),
 }
 
 #[test]

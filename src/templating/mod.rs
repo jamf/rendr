@@ -10,6 +10,7 @@ use crate::blueprint::Values;
 
 use std::fmt::Display;
 use std::fmt::Formatter;
+use std::error::Error;
 
 /// The trait for integrating templating engines.
 pub trait TemplatingEngine {

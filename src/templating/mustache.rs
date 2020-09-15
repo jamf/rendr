@@ -1,6 +1,3 @@
-use std::collections::HashMap;
-
-use super::{RenderError, TemplatingEngine};
 use super::{TemplatingEngine, RenderError};
 use crate::blueprint::Values;
 
@@ -29,6 +26,8 @@ impl From<mustache::Error> for RenderError {
 
 #[test]
 fn render_valid_template() {
+    use std::collections::HashMap;
+
     let template = "name: {{ name }}, value: {{ value }}";
 
     let values: HashMap<_, _> = [("name", "foo"), ("value", "bar"), ("asd", "dsa")]
@@ -37,7 +36,7 @@ fn render_valid_template() {
         .collect();
 
     assert_eq!(
-        Mustache::new().render_template(template, &values).unwrap(),
+        Mustache::new().render_template(template, values.into()).unwrap(),
         "name: foo, value: bar",
     );
 }

@@ -16,9 +16,11 @@ use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use serde_yaml;
 use walkdir::{DirEntry, WalkDir};
+use thiserror::Error;
 
 use crate::templating::TemplatingEngine;
 use crate::Pattern;
+use crate::blueprint::source::BlueprintSourceError;
 use source::Source;
 pub use values::Values;
 
@@ -31,7 +33,7 @@ pub struct Blueprint {
 }
 
 impl Blueprint {
-    pub fn new(source: &str, callbacks: Option<RemoteCallbacks>) -> Result<Blueprint, DynError> {
+    pub fn new(source: &str, callbacks: Option<RemoteCallbacks>) -> Result<Blueprint, BlueprintInitError> {
         let source = Source::new(source, callbacks)?;
 
         let meta_raw = fs::read_to_string(source.path().join("metadata.yaml"))?;
@@ -53,15 +55,20 @@ impl Blueprint {
         self.source.path()
     }
 
-    fn find_scripts(&mut self) -> Result<(), DynError> {
+    fn find_scripts(&mut self) -> Result<(), BlueprintInitError> {
         self.post_script = self.find_script("post-render")?;
 
         Ok(())
     }
 
-    fn find_script(&mut self, script: &str) -> Result<Option<Script>, DynError> {
+    fn find_script(&mut self, script: &str) -> Result<Option<Script>, BlueprintInitError> {
         let mut script_path = PathBuf::new();
-        script_path.push(self.source.path().canonicalize()?);
+        script_path.push(
+            self.source
+                .path()
+                .canonicalize()
+                .map_err(|e| BlueprintInitError::ScriptLookupError(e))?
+            );
         script_path.push("scripts");
         script_path.push(format!("{}.sh", script));
 
@@ -173,6 +180,21 @@ impl Blueprint {
     }
 }
 
+#[derive(Error, Debug)]
+pub enum BlueprintInitError {
+    #[error("error finding blueprint")]
+    SourceError(#[from] BlueprintSourceError),
+
+    #[error("error reading blueprint metadata")]
+    MetadataReadError(#[from] std::io::Error),
+
+    #[error("error parsing blueprint metadata")]
+    MetadataParseError(#[from] serde_yaml::Error),
+
+    #[error("error looking up blueprint scripts")]
+    ScriptLookupError(#[source] std::io::Error),
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct RendrConfig {
     pub name: String,
@@ -205,8 +227,8 @@ impl RendrConfig {
         &self.values
     }
 
-    pub fn blueprint(&self) -> Result<Blueprint, DynError> {
-        Blueprint::new(&self.source)
+    pub fn blueprint(&self) -> Result<Blueprint, BlueprintInitError> {
+        Blueprint::new(&self.source, None)
     }
 }
 
@@ -378,9 +400,6 @@ impl Eq for ValueSpec {}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::blueprint::Blueprint;
-    use crate::templating::Mustache;
     use std::collections::HashMap;
     use std::fs;
     use tempdir::TempDir;
@@ -413,7 +432,7 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&mustache, &test_values(), output_dir.path())
+            .render(&engine, &test_values(), output_dir.path())
             .unwrap();
 
         let test = fs::read_to_string(output_dir.path().join("test.yaml")).unwrap();
@@ -434,7 +453,7 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&mustache, &test_values(), output_dir.path())
+            .render(&engine, &test_values(), output_dir.path())
             .unwrap();
 
         let test = fs::read_to_string(output_dir.path().join("dir/test.yaml")).unwrap();
@@ -452,7 +471,7 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&mustache, &test_values(), output_dir.path())
+            .render(&engine, &test_values(), output_dir.path())
             .unwrap();
 
         let excluded_file = fs::read_to_string(output_dir.path().join("excluded_file")).unwrap();
@@ -469,7 +488,7 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&mustache, &test_values(), output_dir.path())
+            .render(&engine, &test_values(), output_dir.path())
             .unwrap();
 
         let excluded_file1 =
@@ -512,7 +531,7 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&mustache, &test_values(), output_dir.path())
+            .render(&engine, &test_values(), output_dir.path())
             .unwrap();
 
         let script_output = fs::read_to_string(output_dir.path().join("script_output.md")).unwrap();

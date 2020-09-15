@@ -18,7 +18,7 @@ type DynError = Box<dyn Error>;
 pub fn update(args: &ArgMatches) -> Result<(), DynError> {
     // Parse CLI arguments.
     let project_path = args.value_of("project").unwrap_or(".");
-    let new_blueprint = Blueprint::new(args.value_of("blueprint").unwrap())?;
+    let new_blueprint = Blueprint::new(args.value_of("blueprint").unwrap(), None)?;
 
     // Attempt to parse the provided project.
     let project = Project::new(&project_path)?;
