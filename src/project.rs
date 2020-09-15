@@ -6,15 +6,13 @@ use thiserror::Error;
 use crate::blueprint::{Values, RendrConfig, Blueprint, BlueprintInitError};
 use crate::templating::tmplpp::{self, Template};
 
-type DynError = Box<dyn std::error::Error>;
-
 pub struct Project<'p> {
     path: &'p Path,
     meta: RendrConfig,
 }
 
 impl<'p> Project<'p> {
-    pub fn new(path: &'p impl AsRef<Path>) -> Result<Self, DynError> {
+    pub fn new(path: &'p impl AsRef<Path>) -> Result<Self, ProjectError> {
         let path = path.as_ref();
         
         let meta_file = fs::read_to_string(path.join(".rendr.yaml"))?;
@@ -70,6 +68,15 @@ impl<'p> Project<'p> {
 
         Ok(())
     }
+}
+
+#[derive(Error, Debug)]
+pub enum ProjectError {
+    #[error("error reading project's metadata")]
+    MetaFileError(#[from] std::io::Error),
+
+    #[error("error parsing project's metadata")]
+    MetaParseError(#[from] serde_yaml::Error),
 }
 
 #[derive(Error, Debug)]

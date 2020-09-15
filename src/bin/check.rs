@@ -1,12 +1,11 @@
-use std::error::Error;
+use anyhow::Error;
 
 use clap::ArgMatches;
+use log::info;
 
 use rendr::project::Project;
 
-type DynError = Box<dyn Error>;
-
-pub fn check(args: &ArgMatches) -> Result<(), DynError> {
+pub fn check(args: &ArgMatches) -> Result<(), Error> {
     // Parse CLI arguments.
     let project_path = args.value_of("project").unwrap_or(".");
 
@@ -14,6 +13,8 @@ pub fn check(args: &ArgMatches) -> Result<(), DynError> {
     let project = Project::new(&project_path)?;
 
     project.validate()?;
+
+    info!("Project passes validation.");
 
     Ok(())
 }

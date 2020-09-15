@@ -1,4 +1,4 @@
-use std::error::Error;
+use anyhow::Error;
 use std::path::PathBuf;
 
 use clap::ArgMatches;
@@ -8,9 +8,7 @@ use rendr::templating::{tmplpp::Template};
 use rendr::blueprint::{Blueprint};
 use rendr::project::Project;
 
-type DynError = Box<dyn Error>;
-
-pub fn update(args: &ArgMatches) -> Result<(), DynError> {
+pub fn update(args: &ArgMatches) -> Result<(), Error> {
     // Parse CLI arguments.
     let project_path = args.value_of("project").unwrap_or(".");
     let new_blueprint = Blueprint::new(args.value_of("blueprint").unwrap(), None)?;

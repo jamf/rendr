@@ -19,6 +19,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyhow"
+version = "1.0.32"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b602bfe940d21c130f3895acd65221e8a61270debe89d628b9cb4e3ccb8569b"
+
+[[package]]
 name = "arrayref"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1061,6 +1067,7 @@ dependencies = [
 name = "rendr"
 version = "0.3.3-alpha.0"
 dependencies = [
+ "anyhow",
  "cargo-release",
  "clap",
  "env_logger",
