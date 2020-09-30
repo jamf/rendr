@@ -12,8 +12,7 @@ use text_io::read;
 use notify::{Watcher, RecursiveMode, watcher};
 
 use rendr::templating;
-use rendr::blueprint::Blueprint;
-use rendr::blueprint::ValueSpec;
+use rendr::blueprint::{Blueprint, ValueSpec};
 
 type DynError = Box<dyn Error>;
 
@@ -47,7 +46,7 @@ pub fn init(args: &ArgMatches) -> Result<(), DynError> {
         .collect();
     values.extend(prompt_values);
 
-    init_scaffold(args, values.clone())?;
+    init_scaffold(args, &values)?;
 
     if args.is_present("watch") {
         info!("Watching for blueprint changes...");
@@ -69,7 +68,7 @@ pub fn init(args: &ArgMatches) -> Result<(), DynError> {
                     debug!("Watch event: {:?}", event);
                     info!("Blueprint changed! Recreating scaffold...");
                     std::fs::remove_dir_all(scaffold_path)?;
-                    init_scaffold(args, values.clone())?;
+                    init_scaffold(args, &values)?;
                     info!("Success!");
                 },
                 Err(e) => error!("watch error: {:?}", e),
@@ -80,7 +79,7 @@ pub fn init(args: &ArgMatches) -> Result<(), DynError> {
     Ok(())
 }
 
-pub fn init_scaffold(args: &ArgMatches, values: HashMap<&str, &str>) -> Result<(), DynError> {
+fn init_scaffold(args: &ArgMatches, values: &HashMap<&str, &str>) -> Result<(), DynError> {
     // Parse CLI arguments.
     let blueprint_path = args.value_of("blueprint").unwrap();
     let name = args.value_of("name").unwrap();
