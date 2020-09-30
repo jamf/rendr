@@ -2,11 +2,14 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::io::{self, Write};
 use std::path::Path;
+use std::sync::mpsc::channel;
+use std::time::Duration;
 
 use clap::ArgMatches;
 use git2::{Oid, Repository, IndexAddOption, Signature};
-use log::{info, debug};
+use log::{info, debug, error};
 use text_io::read;
+use notify::{Watcher, RecursiveMode, watcher};
 
 use rendr::templating;
 use rendr::blueprint::Blueprint;
@@ -15,15 +18,11 @@ use rendr::blueprint::ValueSpec;
 type DynError = Box<dyn Error>;
 
 pub fn init(args: &ArgMatches) -> Result<(), DynError> {
-    // Parse CLI arguments.
     let blueprint_path = args.value_of("blueprint").unwrap();
     let name = args.value_of("name").unwrap();
-    let output_dir = Path::new(args.value_of("dir").unwrap_or(name));
+    let scaffold_path = Path::new(args.value_of("dir").unwrap_or(name));
 
-    // Attempt to read the provided blueprint.
     let blueprint = Blueprint::new(blueprint_path)?;
-
-    println!("{}", blueprint);
 
     // Time to parse values. Let's start by collecting the defaults.
     let mut values: HashMap<&str, &str> = blueprint.default_values()
@@ -47,6 +46,50 @@ pub fn init(args: &ArgMatches) -> Result<(), DynError> {
         .map(|(k, v)| (*k, v.as_str()))
         .collect();
     values.extend(prompt_values);
+
+    init_scaffold(args, values.clone())?;
+
+    if args.is_present("watch") {
+        info!("Watching for blueprint changes...");
+
+        // Create a channel to receive the events.
+        let (tx, rx) = channel();
+
+        // Create a watcher object, delivering debounced events.
+        // The notification back-end is selected based on the platform.
+        let mut watcher = watcher(tx, Duration::from_secs(1))?;
+
+        // Add a path to be watched. All files and directories at that path and
+        // below will be monitored for changes.
+        watcher.watch(blueprint_path, RecursiveMode::Recursive)?;
+
+        loop {
+            match rx.recv() {
+                Ok(event) => {
+                    debug!("Watch event: {:?}", event);
+                    info!("Blueprint changed! Recreating scaffold...");
+                    std::fs::remove_dir_all(scaffold_path)?;
+                    init_scaffold(args, values.clone())?;
+                    info!("Success!");
+                },
+                Err(e) => error!("watch error: {:?}", e),
+            }
+        }
+    }
+
+    Ok(())
+}
+
+pub fn init_scaffold(args: &ArgMatches, values: HashMap<&str, &str>) -> Result<(), DynError> {
+    // Parse CLI arguments.
+    let blueprint_path = args.value_of("blueprint").unwrap();
+    let name = args.value_of("name").unwrap();
+    let output_dir = Path::new(args.value_of("dir").unwrap_or(name));
+
+    // Attempt to read the provided blueprint.
+    let blueprint = Blueprint::new(blueprint_path)?;
+
+    println!("{}", blueprint);
 
     info!("Output directory: {:?}. Creating your new scaffold...", &output_dir);
 

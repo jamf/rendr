@@ -5,35 +5,40 @@ settings:
   - StrictUtf8
 args:
 subcommands:
-  - init:
-      about: Initializes a project from a blueprint
-      args:
-        - blueprint:
-            short: b
-            long: blueprint
-            required: true
-            help: The location of the blueprint (a git repo or a local directory)
-            takes_value: true
-        - name:
-            required: true
-            help: The name of the project
-            takes_value: true
-        - dir:
-            short: d
-            long: dir
-            help: The output directory name
-            takes_value: true
-        - value:
-            short: v
-            long: value
-            help: Value(s) to render the blueprint with
-            takes_value: true
-            multiple: true
-        - git-init:
-            long: git-init
-            help: Initializes a Git repository in the rendered project
-            takes_value: false
-        - no-git-init:
-            long: no-git-init
-            help: Skips initializing Git repository in the rendered project
-            takes_value: false
+- init:
+    about: Initializes a project from a blueprint
+    args:
+    - blueprint:
+        short: b
+        long: blueprint
+        required: true
+        help: The location of the blueprint (a git repo or a local directory)
+        takes_value: true
+    - name:
+        required: true
+        help: The name of the project
+        takes_value: true
+    - dir:
+        short: d
+        long: dir
+        help: The output directory name
+        takes_value: true
+    - value:
+        short: v
+        long: value
+        help: Value(s) to render the blueprint with
+        takes_value: true
+        multiple: true
+    - git-init:
+        long: git-init
+        help: Initializes a Git repository in the rendered project
+        takes_value: false
+    - no-git-init:
+        long: no-git-init
+        help: Skips initializing Git repository in the rendered project
+        takes_value: false
+    - watch:
+        long: watch
+        short: w
+        takes_value: false
+        help: After initializing the scaffold, watch the filesystem for changes to the blueprint and reinitalize the scaffold when they are detected.
