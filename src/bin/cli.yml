@@ -37,3 +37,8 @@ subcommands:
             long: no-git-init
             help: Skips initializing Git repository in the rendered project
             takes_value: false
+        - watch:
+            long: watch
+            short: w
+            takes_value: false
+            help: After initializing the scaffold, watch the filesystem for changes to the blueprint and reinitalize the scaffold when they are detected.
