@@ -80,7 +80,9 @@ fn watch(
                 debug!("Watch event: {:?}", event);
                 info!("Blueprint changed! Recreating scaffold...");
                 std::fs::remove_dir_all(scaffold_path)?;
-                init_scaffold(args, values)?;
+                if let Err(e) = init_scaffold(args, values) {
+                    error!("{}", e);
+                }
             },
             Err(e) => error!("watch error: {:?}", e),
         }
