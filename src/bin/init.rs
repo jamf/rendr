@@ -49,33 +49,42 @@ pub fn init(args: &ArgMatches) -> Result<(), DynError> {
     init_scaffold(args, &values)?;
 
     if args.is_present("watch") {
-        info!("Watching for blueprint changes...");
-
-        // Create a channel to receive the events.
-        let (tx, rx) = channel();
-
-        // Create a watcher object, delivering debounced events.
-        // The notification back-end is selected based on the platform.
-        let mut watcher = watcher(tx, Duration::from_secs(1))?;
-
-        // Add a path to be watched. All files and directories at that path and
-        // below will be monitored for changes.
-        watcher.watch(blueprint_path, RecursiveMode::Recursive)?;
-
-        loop {
-            match rx.recv() {
-                Ok(event) => {
-                    debug!("Watch event: {:?}", event);
-                    info!("Blueprint changed! Recreating scaffold...");
-                    std::fs::remove_dir_all(scaffold_path)?;
-                    init_scaffold(args, &values)?;
-                },
-                Err(e) => error!("watch error: {:?}", e),
-            }
-        }
+        watch(blueprint_path, scaffold_path, args, &values)?;
     }
 
     Ok(())
+}
+
+fn watch(
+    blueprint_path: impl AsRef<Path>,
+    scaffold_path: impl AsRef<Path> + Copy,
+    args: &ArgMatches,
+    values: &HashMap<&str, &str>,
+) -> Result<(), DynError> {
+    info!("Watching for blueprint changes...");
+
+    // Create a channel to receive the events.
+    let (tx, rx) = channel();
+
+    // Create a watcher object, delivering debounced events.
+    // The notification back-end is selected based on the platform.
+    let mut watcher = watcher(tx, Duration::from_secs(1))?;
+
+    // Add a path to be watched. All files and directories at that path and
+    // below will be monitored for changes.
+    watcher.watch(blueprint_path, RecursiveMode::Recursive)?;
+
+    loop {
+        match rx.recv() {
+            Ok(event) => {
+                debug!("Watch event: {:?}", event);
+                info!("Blueprint changed! Recreating scaffold...");
+                std::fs::remove_dir_all(scaffold_path)?;
+                init_scaffold(args, values)?;
+            },
+            Err(e) => error!("watch error: {:?}", e),
+        }
+    }
 }
 
 fn init_scaffold(args: &ArgMatches, values: &HashMap<&str, &str>) -> Result<(), DynError> {
