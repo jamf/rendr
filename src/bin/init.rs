@@ -69,7 +69,6 @@ pub fn init(args: &ArgMatches) -> Result<(), DynError> {
                     info!("Blueprint changed! Recreating scaffold...");
                     std::fs::remove_dir_all(scaffold_path)?;
                     init_scaffold(args, &values)?;
-                    info!("Success!");
                 },
                 Err(e) => error!("watch error: {:?}", e),
             }
