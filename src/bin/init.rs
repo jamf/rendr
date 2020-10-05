@@ -30,7 +30,10 @@ pub fn init(args: &ArgMatches) -> Result<(), DynError> {
         args.value_of("pass")
     };
 
-    let callbacks = prepare_callbacks(username, password);
+    let provided_ssh_path = args.value_of("ssh-key")
+        .map(|p| p.as_ref());
+
+    let callbacks = prepare_callbacks(username, password, provided_ssh_path);
     let blueprint = Blueprint::new(blueprint_path, Some(callbacks))?;
 
     // Time to parse values. Let's start by collecting the defaults.
@@ -166,7 +169,11 @@ fn parse_value(s: &str) -> Result<(&str, &str), String> {
     Ok((result.0, result.1))
 }
 
-fn prepare_callbacks<'c>(provided_user: Option<&'c str>, provided_pass: Option<&'c str>) -> RemoteCallbacks<'c> {
+fn prepare_callbacks<'c>(
+    provided_user: Option<&'c str>,
+    provided_pass: Option<&'c str>,
+    provided_ssh_key: Option<&'c Path>,
+) -> RemoteCallbacks<'c> {
     let mut callbacks = RemoteCallbacks::new();
     let mut auth_retries = 3;
 
@@ -180,12 +187,21 @@ fn prepare_callbacks<'c>(provided_user: Option<&'c str>, provided_pass: Option<&
         if allowed_types.is_ssh_key() {
             auth_retries -= 1;
 
-            return Cred::ssh_key(
-                &get_username(provided_user, username_from_url).unwrap(),
-                None,
-                Path::new(&format!("{}/.ssh/id_rsa", std::env::var("HOME").unwrap())),
-                None,
-            );
+            if let Some(path) = provided_ssh_key {
+                return Cred::ssh_key(
+                    &get_username(provided_user, username_from_url).unwrap(),
+                    None,
+                    path,
+                    None,
+                );
+            } else {
+                return Cred::ssh_key(
+                    &get_username(provided_user, username_from_url).unwrap(),
+                    None,
+                    &Path::new(&format!("{}/.ssh/id_rsa", std::env::var("HOME").unwrap())),
+                    None,
+                );
+            }
         } else if allowed_types.is_username() {
             return Cred::username(
                 &get_username(provided_user, username_from_url).unwrap()
