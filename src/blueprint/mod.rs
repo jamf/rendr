@@ -14,6 +14,7 @@ use log::{info, debug};
 use serde::{Deserialize, Serialize};
 use serde_yaml;
 use walkdir::{DirEntry, WalkDir};
+use git2::RemoteCallbacks;
 
 use crate::Pattern;
 use crate::templating::TemplatingEngine;
@@ -28,8 +29,8 @@ pub struct Blueprint {
 }
 
 impl Blueprint {
-    pub fn new(source: &str) -> Result<Blueprint, DynError> {
-        let source = Source::new(source)?;
+    pub fn new(source: &str, callbacks: Option<RemoteCallbacks>) -> Result<Blueprint, DynError> {
+        let source = Source::new(source, callbacks)?;
 
         let meta_raw = fs::read_to_string(source.path().join("metadata.yaml"))?;
 
@@ -44,6 +45,10 @@ impl Blueprint {
         blueprint.find_scripts()?;
 
         Ok(blueprint)
+    }
+
+    pub fn path(&self) -> &Path {
+        self.source.path()
     }
 
     fn find_scripts(&mut self) -> Result<(), DynError> {
@@ -383,7 +388,7 @@ mod tests {
 
     #[test]
     fn parse_example_blueprint_metadata() {
-        let blueprint = Blueprint::new("test_assets/example_blueprint").unwrap();
+        let blueprint = Blueprint::new("test_assets/example_blueprint", None).unwrap();
 
         assert_eq!(blueprint.metadata.name, "example-blueprint");
         assert_eq!(blueprint.metadata.version, 1);
@@ -393,7 +398,7 @@ mod tests {
 
     #[test]
     fn render_example_blueprint() {
-        let blueprint = Blueprint::new("test_assets/example_blueprint").unwrap();
+        let blueprint = Blueprint::new("test_assets/example_blueprint", None).unwrap();
 
         let output_dir = TempDir::new("my-project").unwrap();
 
@@ -412,7 +417,7 @@ mod tests {
 
     #[test]
     fn render_example_blueprint_recursive() {
-        let blueprint = Blueprint::new("test_assets/example_blueprint").unwrap();
+        let blueprint = Blueprint::new("test_assets/example_blueprint", None).unwrap();
 
         let output_dir = TempDir::new("my-project").unwrap();
 
@@ -428,7 +433,7 @@ mod tests {
 
     #[test]
     fn exclusions_work() {
-        let blueprint = Blueprint::new("test_assets/example_blueprint").unwrap();
+        let blueprint = Blueprint::new("test_assets/example_blueprint", None).unwrap();
 
         let output_dir = TempDir::new("my-project").unwrap();
 
@@ -443,7 +448,7 @@ mod tests {
 
     #[test]
     fn glob_exclusions_work() {
-        let blueprint = Blueprint::new("test_assets/example_blueprint").unwrap();
+        let blueprint = Blueprint::new("test_assets/example_blueprint", None).unwrap();
 
         let output_dir = TempDir::new("my-project").unwrap();
 
@@ -478,7 +483,7 @@ mod tests {
 
     #[test]
     fn blueprint_post_script_is_found_and_run() {
-        let blueprint = Blueprint::new("test_assets/example_blueprint_with_scripts").unwrap();
+        let blueprint = Blueprint::new("test_assets/example_blueprint_with_scripts", None).unwrap();
 
         let output_dir = TempDir::new("my-project").unwrap();
 
