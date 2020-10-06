@@ -48,8 +48,7 @@ pub fn init(args: &ArgMatches) -> Result<(), DynError> {
 
     // Figure out which required values are still missing.
     let missing_values = blueprint.required_values()
-        .filter(|v| values.get::<str>(&v.name)
-        .is_none());
+        .filter(|v| values.get::<str>(&v.name).is_none());
 
     // Prompt for the missing values and collect them.
     let prompt_values_owned: Vec<_> = prompt_for_values(missing_values).collect();
