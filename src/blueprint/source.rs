@@ -43,8 +43,6 @@ impl Source {
         // Clone the project.
         builder.clone(url, dir.as_ref())?;
 
-        // Repository::clone(url, &dir)?;
-
         Ok(Source::Remote(RemoteSource {
             url: url.to_string(),
             checked_out: dir,
