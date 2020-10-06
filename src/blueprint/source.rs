@@ -1,8 +1,8 @@
 use std::error::Error;
 use std::path::{Path, PathBuf};
 
-use tempdir::TempDir;
 use git2::RemoteCallbacks;
+use tempdir::TempDir;
 
 type DynError = Box<dyn Error>;
 
@@ -55,7 +55,7 @@ impl Source {
 
         match self {
             Remote(tmpdir) => tmpdir.path(),
-            Local(path)    => &path,
+            Local(path) => &path,
         }
     }
 
@@ -68,10 +68,10 @@ impl Source {
 
         match self {
             Local(path) => pathdiff::diff_paths(path, from)
-                                .unwrap()
-                                .into_os_string()
-                                .into_string()
-                                .unwrap(),
+                .unwrap()
+                .into_os_string()
+                .into_string()
+                .unwrap(),
             Remote(src) => src.url().to_string(),
         }
     }
@@ -104,5 +104,8 @@ fn source_calculates_relative_path_correctly() {
     let source = Source::new("test_assets/example_blueprint", None).unwrap();
     let project_dir = ".";
 
-    assert_eq!(source.to_string(project_dir), "test_assets/example_blueprint");
+    assert_eq!(
+        source.to_string(project_dir),
+        "test_assets/example_blueprint"
+    );
 }

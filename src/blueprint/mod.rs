@@ -10,14 +10,14 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-use log::{info, debug};
+use git2::RemoteCallbacks;
+use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use serde_yaml;
 use walkdir::{DirEntry, WalkDir};
-use git2::RemoteCallbacks;
 
-use crate::Pattern;
 use crate::templating::TemplatingEngine;
+use crate::Pattern;
 use source::Source;
 
 type DynError = Box<dyn Error>;
@@ -64,7 +64,10 @@ impl Blueprint {
         script_path.push(format!("{}.sh", script));
 
         if !script_path.exists() {
-            debug!("No {} script found in blueprint scripts directory - skipping", script);
+            debug!(
+                "No {} script found in blueprint scripts directory - skipping",
+                script
+            );
             return Ok(None);
         }
 
@@ -75,38 +78,38 @@ impl Blueprint {
         self.metadata.git_init
     }
 
-    pub fn values(&self) -> impl Iterator<Item=&ValueSpec> {
+    pub fn values(&self) -> impl Iterator<Item = &ValueSpec> {
         self.metadata.values.iter()
     }
 
-    pub fn default_values(&self) -> impl Iterator<Item=(&str, &str)> {
+    pub fn default_values(&self) -> impl Iterator<Item = (&str, &str)> {
         self.values()
             .filter(|v| v.default.is_some())
             .map(|v| (v.name.as_str(), v.default.as_ref().unwrap().as_str()))
     }
 
-    pub fn required_values(&self) -> impl Iterator<Item=&ValueSpec> {
-        self.values()
-            .filter(|v| v.required)
+    pub fn required_values(&self) -> impl Iterator<Item = &ValueSpec> {
+        self.values().filter(|v| v.required)
     }
 
-    fn files(&self) -> impl Iterator<Item=Result<File, walkdir::Error>> {
+    fn files(&self) -> impl Iterator<Item = Result<File, walkdir::Error>> {
         let template_root = self.source.path().join("template");
         Files::new(&template_root)
     }
 
     fn is_excluded<P: AsRef<Path>>(&self, file: P) -> bool {
-        self.metadata.exclusions
+        self.metadata
+            .exclusions
             .iter()
             .find(|pattern| pattern.matches_path(file.as_ref()))
             .is_some()
     }
 
     pub fn render<TE: TemplatingEngine>(
-            &self,
-            engine: &TE,
-            values: &HashMap<&str, &str>,
-            output_dir: &Path,
+        &self,
+        engine: &TE,
+        values: &HashMap<&str, &str>,
+        output_dir: &Path,
     ) -> Result<(), DynError> {
         // Create our output directory if it doesn't exist yet.
         debug!("Creating root project dir {:?}", &output_dir);
@@ -123,17 +126,18 @@ impl Blueprint {
                 debug!("Found file {:?}", &path);
 
                 if self.is_excluded(&file.path_from_template_root) {
-                    debug!("Copying {:?} to {:?} without templating.", &path, &output_path);
+                    debug!(
+                        "Copying {:?} to {:?} without templating.",
+                        &path, &output_path
+                    );
                     fs::copy(path, output_path)?;
-                }
-                else {
+                } else {
                     debug!("Using template {:?} to render {:?}", &path, &output_path);
                     let contents = fs::read_to_string(&path)?;
                     let contents = engine.render_template(&contents, &values)?;
                     fs::write(output_path, &contents)?;
                 }
-            }
-            else if path.is_dir() {
+            } else if path.is_dir() {
                 if !output_path.is_dir() {
                     debug!("Creating directory {:?}", &output_path);
                     fs::create_dir(&output_path)?;
@@ -156,7 +160,12 @@ impl Blueprint {
         Ok(())
     }
 
-    fn generate_rendr_file(&self, source: &str, output_dir: &Path, values: &HashMap<&str, &str>) -> Result<(), DynError> {
+    fn generate_rendr_file(
+        &self,
+        source: &str,
+        output_dir: &Path,
+        values: &HashMap<&str, &str>,
+    ) -> Result<(), DynError> {
         let path = output_dir.join(Path::new(".rendr.yaml"));
         let config = RendrConfig::new(source.to_string().clone(), &self.metadata, values);
         let yaml = serde_yaml::to_string(&config)?;
@@ -186,16 +195,16 @@ struct RendrConfigValue {
 
 impl RendrConfigValue {
     fn new(name: String, value: String) -> Self {
-        RendrConfigValue {
-            name,
-            value,
-        }
+        RendrConfigValue { name, value }
     }
 }
 
 impl RendrConfig {
     fn new(source: String, metadata: &BlueprintMetadata, values: &HashMap<&str, &str>) -> Self {
-        let values = values.iter().map(|(k, v)| RendrConfigValue::new(String::from(*k), String::from(*v))).collect();
+        let values = values
+            .iter()
+            .map(|(k, v)| RendrConfigValue::new(String::from(*k), String::from(*v)))
+            .collect();
 
         RendrConfig {
             name: metadata.name.clone(),
@@ -229,7 +238,7 @@ impl Iterator for Files {
         if let Some(next) = self.walkdir.next() {
             match next {
                 Ok(entry) => return Some(Ok(File::new(&self.template_root, entry))),
-                Err(e)    => return Some(Err(e)),
+                Err(e) => return Some(Err(e)),
             }
         }
 
@@ -316,10 +325,7 @@ struct ScriptError {
 
 impl ScriptError {
     fn new(status: Option<i32>, msg: String) -> Self {
-        ScriptError {
-            status,
-            msg,
-        }
+        ScriptError { status, msg }
     }
 }
 
@@ -329,7 +335,7 @@ impl Display for ScriptError {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self.status {
             Some(status) => write!(f, "Script failed with status {}", status)?,
-            None         => write!(f, "Script failed, but didn't exit!")?,
+            None => write!(f, "Script failed, but didn't exit!")?,
         }
 
         Ok(())
@@ -379,12 +385,12 @@ impl Eq for ValueSpec {}
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::blueprint::Blueprint;
+    use crate::templating::Mustache;
     use std::collections::HashMap;
     use std::fs;
     use tempdir::TempDir;
-    use crate::blueprint::Blueprint;
-    use crate::templating::Mustache;
-    use super::*;
 
     #[test]
     fn parse_example_blueprint_metadata() {
@@ -392,8 +398,14 @@ mod tests {
 
         assert_eq!(blueprint.metadata.name, "example-blueprint");
         assert_eq!(blueprint.metadata.version, 1);
-        assert_eq!(blueprint.metadata.author, "Brian S. <brian.stewart@jamf.com>, Tomasz K. <tomasz.kurcz@jamf.com>");
-        assert_eq!(blueprint.metadata.description, "Just an example blueprint for `rendr`.");
+        assert_eq!(
+            blueprint.metadata.author,
+            "Brian S. <brian.stewart@jamf.com>, Tomasz K. <tomasz.kurcz@jamf.com>"
+        );
+        assert_eq!(
+            blueprint.metadata.description,
+            "Just an example blueprint for `rendr`."
+        );
     }
 
     #[test]
@@ -404,7 +416,9 @@ mod tests {
 
         let mustache = Mustache::new();
 
-        blueprint.render(&mustache, &test_values(), output_dir.path()).unwrap();
+        blueprint
+            .render(&mustache, &test_values(), output_dir.path())
+            .unwrap();
 
         let test = fs::read_to_string(output_dir.path().join("test.yaml")).unwrap();
         let another_test = fs::read_to_string(output_dir.path().join("another-test.yaml")).unwrap();
@@ -423,7 +437,9 @@ mod tests {
 
         let mustache = Mustache::new();
 
-        blueprint.render(&mustache, &test_values(), output_dir.path()).unwrap();
+        blueprint
+            .render(&mustache, &test_values(), output_dir.path())
+            .unwrap();
 
         let test = fs::read_to_string(output_dir.path().join("dir/test.yaml")).unwrap();
 
@@ -439,7 +455,9 @@ mod tests {
 
         let mustache = Mustache::new();
 
-        blueprint.render(&mustache, &test_values(), output_dir.path()).unwrap();
+        blueprint
+            .render(&mustache, &test_values(), output_dir.path())
+            .unwrap();
 
         let excluded_file = fs::read_to_string(output_dir.path().join("excluded_file")).unwrap();
 
@@ -454,10 +472,14 @@ mod tests {
 
         let mustache = Mustache::new();
 
-        blueprint.render(&mustache, &test_values(), output_dir.path()).unwrap();
+        blueprint
+            .render(&mustache, &test_values(), output_dir.path())
+            .unwrap();
 
-        let excluded_file1 = fs::read_to_string(output_dir.path().join("excluded_files/foo")).unwrap();
-        let excluded_file2 = fs::read_to_string(output_dir.path().join("excluded_files/bar")).unwrap();
+        let excluded_file1 =
+            fs::read_to_string(output_dir.path().join("excluded_files/foo")).unwrap();
+        let excluded_file2 =
+            fs::read_to_string(output_dir.path().join("excluded_files/bar")).unwrap();
 
         assert!(excluded_file1.find("{{ name }}").is_some());
         assert!(excluded_file2.find("{{ name }}").is_some());
@@ -465,7 +487,10 @@ mod tests {
 
     #[test]
     fn script_can_be_run_successfully() {
-        let script = Script::new("some script", PathBuf::from("test_assets/scripts/hello_world.sh"));
+        let script = Script::new(
+            "some script",
+            PathBuf::from("test_assets/scripts/hello_world.sh"),
+        );
 
         let values = HashMap::new();
         script.run(Path::new("."), &values).unwrap();
@@ -473,7 +498,10 @@ mod tests {
 
     #[test]
     fn running_failing_script_returns_an_error() {
-        let script = Script::new("some script", PathBuf::from("test_assets/scripts/failing.sh"));
+        let script = Script::new(
+            "some script",
+            PathBuf::from("test_assets/scripts/failing.sh"),
+        );
 
         let values = HashMap::new();
         if let Ok(()) = script.run(Path::new("."), &values) {
@@ -489,7 +517,9 @@ mod tests {
 
         let mustache = Mustache::new();
 
-        blueprint.render(&mustache, &test_values(), output_dir.path()).unwrap();
+        blueprint
+            .render(&mustache, &test_values(), output_dir.path())
+            .unwrap();
 
         let script_output = fs::read_to_string(output_dir.path().join("script_output.md")).unwrap();
 
@@ -498,7 +528,13 @@ mod tests {
 
     // Test helpers
     fn test_values() -> HashMap<&'static str, &'static str> {
-        vec![("name", "my-project"), ("version", "1"), ("foobar", "stuff")]
-            .iter().cloned().collect()
+        vec![
+            ("name", "my-project"),
+            ("version", "1"),
+            ("foobar", "stuff"),
+        ]
+        .iter()
+        .cloned()
+        .collect()
     }
 }
