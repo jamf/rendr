@@ -32,6 +32,7 @@ log = { version = "0.4", features = ["std", "serde"] }
 env_logger = "0.7.1"
 pathdiff = "0.2.0"
 notify = "4.0.15"
+rpassword = "5.0.0"
 
 [dev-dependencies]
 cargo-release = "0.13.0"

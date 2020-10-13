@@ -41,4 +41,19 @@ subcommands:
             long: watch
             short: w
             takes_value: false
-            help: After initializing the scaffold, watch the filesystem for changes to the blueprint and reinitalize the scaffold when they are detected.
+            help: After initializing the scaffold, watch the filesystem for changes to the blueprint and reinitalize the scaffold when they are detected
+        - user:
+            short: u
+            long: user
+            help: The user for git authentication
+            takes_value: true
+        - pass:
+            short: p
+            long: pass
+            help: The password for git authentication (it's recommended to use the GIT_PASS env var instead)
+            takes_value: true
+        - ssh-key:
+            short: k
+            long: ssh-key
+            help: The path to the private SSH key for git auth
+            takes_value: true

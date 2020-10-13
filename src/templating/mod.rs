@@ -4,10 +4,10 @@
 mod mustache;
 pub use self::mustache::Mustache;
 
+use std::collections::HashMap;
+use std::error::Error;
 use std::fmt::Display;
 use std::fmt::Formatter;
-use std::error::Error;
-use std::collections::HashMap;
 
 /// The trait for integrating templating engines.
 pub trait TemplatingEngine {

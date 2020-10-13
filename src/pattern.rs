@@ -1,10 +1,10 @@
-use std::ops::Deref;
 use std::fmt;
+use std::ops::Deref;
 
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 
 /// A glob pattern for paths, meant to be directly deserialized into.
-/// 
+///
 /// This is effectively a wrapper around patterns in the `glob` crate and follows
 /// [the same rules](glob::Pattern).
 pub struct Pattern(glob::Pattern);
@@ -33,12 +33,10 @@ impl<'de> Visitor<'de> for PatternVisitor {
     where
         E: de::Error,
     {
-        Ok(Pattern(
-            match glob::Pattern::new(value) {
-                Ok(pattern) => pattern,
-                Err(e)      => return Err(E::custom(format!("invalid path pattern {}: {}", value, e))),
-            }
-        ))
+        Ok(Pattern(match glob::Pattern::new(value) {
+            Ok(pattern) => pattern,
+            Err(e) => return Err(E::custom(format!("invalid path pattern {}: {}", value, e))),
+        }))
     }
 }
 
