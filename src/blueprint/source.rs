@@ -2,7 +2,6 @@ use std::path::{Path, PathBuf};
 
 use git2::RemoteCallbacks;
 use tempdir::TempDir;
-use git2::Repository;
 use thiserror::Error;
 
 // type DynError = Box<dyn Error>;
@@ -13,7 +12,10 @@ pub enum Source {
 }
 
 impl Source {
-    pub fn new(source: &str, callbacks: Option<RemoteCallbacks>) -> Result<Self, BlueprintSourceError> {
+    pub fn new(
+        source: &str,
+        callbacks: Option<RemoteCallbacks>,
+    ) -> Result<Self, BlueprintSourceError> {
         let path = Path::new(source);
 
         if path.exists() {
@@ -27,7 +29,7 @@ impl Source {
         Ok(Source::Local(
             path.as_ref()
                 .canonicalize()
-                .map_err(|e| BlueprintSourceError::LocalReadError(e))?
+                .map_err(|e| BlueprintSourceError::LocalReadError(e))?,
         ))
     }
 

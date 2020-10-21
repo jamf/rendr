@@ -1,4 +1,4 @@
-use super::{TemplatingEngine, RenderError};
+use super::{RenderError, TemplatingEngine};
 use crate::blueprint::Values;
 
 /// [{{ mustache }}](https://mustache.github.io/) is a simple, logic-less templating engine.
@@ -36,7 +36,9 @@ fn render_valid_template() {
         .collect();
 
     assert_eq!(
-        Mustache::new().render_template(template, values.into()).unwrap(),
+        Mustache::new()
+            .render_template(template, values.into())
+            .unwrap(),
         "name: foo, value: bar",
     );
 }

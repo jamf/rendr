@@ -1,9 +1,9 @@
-use std::path::{Path, PathBuf};
 use std::fs;
+use std::path::{Path, PathBuf};
 
 use thiserror::Error;
 
-use crate::blueprint::{Values, RendrConfig, Blueprint, BlueprintInitError};
+use crate::blueprint::{Blueprint, BlueprintInitError, RendrConfig, Values};
 use crate::templating::tmplpp::{self, Template};
 
 pub struct Project<'p> {
@@ -14,14 +14,11 @@ pub struct Project<'p> {
 impl<'p> Project<'p> {
     pub fn new(path: &'p impl AsRef<Path>) -> Result<Self, ProjectError> {
         let path = path.as_ref();
-        
+
         let meta_file = fs::read_to_string(path.join(".rendr.yaml"))?;
         let meta = serde_yaml::from_str(&meta_file)?;
 
-        Ok(Self {
-            path,
-            meta,
-        })
+        Ok(Self { path, meta })
     }
 
     /// Get a path to the given file within the project.
@@ -57,8 +54,9 @@ impl<'p> Project<'p> {
                     .map_err(|e| ValidationError::TemplateReadError(e))?;
                 let template = Template::from_str(&raw_template)?;
 
-                let generated_contents = std::fs::read_to_string(PathBuf::from(self.path).join(rel_path))
-                    .map_err(|e| ValidationError::ProjectFileReadError(e))?;
+                let generated_contents =
+                    std::fs::read_to_string(PathBuf::from(self.path).join(rel_path))
+                        .map_err(|e| ValidationError::ProjectFileReadError(e))?;
 
                 if !template.validate_generated_output(&values, &generated_contents) {
                     return Err(ValidationError::MatchError(rel_path.to_owned()).into());
@@ -83,11 +81,9 @@ impl<'p> Project<'p> {
                 let template = Template::from_str(&raw_template)
                     .map_err(|e| UpdateError::OldTemplateParseError(e))?;
 
-                let new_template = std::fs::read_to_string(
-                    new_blueprint.path()
-                        .join("template")
-                        .join(rel_path)
-                ).map_err(|e| UpdateError::NewTemplateReadError(e))?;
+                let new_template =
+                    std::fs::read_to_string(new_blueprint.path().join("template").join(rel_path))
+                        .map_err(|e| UpdateError::NewTemplateReadError(e))?;
                 let new_template = Template::from_str(&new_template)
                     .map_err(|e| UpdateError::NewTemplateParseError(e))?;
 

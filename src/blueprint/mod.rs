@@ -1,6 +1,7 @@
 mod source;
 mod values;
 
+use std::clone::Clone;
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -9,18 +10,17 @@ use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::clone::Clone;
 
 use git2::RemoteCallbacks;
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use serde_yaml;
-use walkdir::{DirEntry, WalkDir};
 use thiserror::Error;
+use walkdir::{DirEntry, WalkDir};
 
+use crate::blueprint::source::BlueprintSourceError;
 use crate::templating::TemplatingEngine;
 use crate::Pattern;
-use crate::blueprint::source::BlueprintSourceError;
 use source::Source;
 pub use values::Values;
 
@@ -33,7 +33,10 @@ pub struct Blueprint {
 }
 
 impl Blueprint {
-    pub fn new(source: &str, callbacks: Option<RemoteCallbacks>) -> Result<Blueprint, BlueprintInitError> {
+    pub fn new(
+        source: &str,
+        callbacks: Option<RemoteCallbacks>,
+    ) -> Result<Blueprint, BlueprintInitError> {
         let source = Source::new(source, callbacks)?;
 
         let meta_raw = fs::read_to_string(source.path().join("metadata.yaml"))?;
@@ -67,8 +70,8 @@ impl Blueprint {
             self.source
                 .path()
                 .canonicalize()
-                .map_err(|e| BlueprintInitError::ScriptLookupError(e))?
-            );
+                .map_err(|e| BlueprintInitError::ScriptLookupError(e))?,
+        );
         script_path.push("scripts");
         script_path.push(format!("{}.sh", script));
 
@@ -101,23 +104,24 @@ impl Blueprint {
         self.values().filter(|v| v.required)
     }
 
-    pub fn files(&self) -> impl Iterator<Item=Result<File, walkdir::Error>> {
+    pub fn files(&self) -> impl Iterator<Item = Result<File, walkdir::Error>> {
         let template_root = self.source.path().join("template");
         Files::new(&template_root)
     }
 
     pub fn is_excluded<P: AsRef<Path>>(&self, file: P) -> bool {
-        self.metadata.exclusions
+        self.metadata
+            .exclusions
             .iter()
             .find(|pattern| pattern.matches_path(file.as_ref()))
             .is_some()
     }
 
     pub fn render<'s, TE: TemplatingEngine>(
-            &self,
-            engine: &TE,
-            values: &Values,
-            output_dir: &Path,
+        &self,
+        engine: &TE,
+        values: &Values,
+        output_dir: &Path,
     ) -> Result<(), DynError> {
         // Create our output directory if it doesn't exist yet.
         debug!("Creating root project dir {:?}", &output_dir);
@@ -168,7 +172,12 @@ impl Blueprint {
         Ok(())
     }
 
-    fn generate_rendr_file<'s>(&self, source: &str, output_dir: &Path, values: &Values) -> Result<(), DynError> {
+    fn generate_rendr_file<'s>(
+        &self,
+        source: &str,
+        output_dir: &Path,
+        values: &Values,
+    ) -> Result<(), DynError> {
         let path = output_dir.join(Path::new(".rendr.yaml"));
         let config = RendrConfig::new(source.to_string().clone(), &self.metadata, values.clone());
         let yaml = serde_yaml::to_string(&config)?;
@@ -400,12 +409,12 @@ impl Eq for ValueSpec {}
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::blueprint::Blueprint;
+    use crate::templating::Tmplpp;
     use std::collections::HashMap;
     use std::fs;
     use tempdir::TempDir;
-    use crate::blueprint::Blueprint;
-    use crate::templating::Tmplpp;
-    use super::*;
 
     #[test]
     fn parse_example_blueprint_metadata() {
@@ -541,10 +550,14 @@ mod tests {
 
     // Test helpers
     fn test_values() -> Values {
-        vec![("name", "my-project"), ("version", "1"), ("foobar", "stuff")]
-            .iter()
-            .cloned()
-            .collect::<HashMap<_, _>>()
-            .into()
+        vec![
+            ("name", "my-project"),
+            ("version", "1"),
+            ("foobar", "stuff"),
+        ]
+        .iter()
+        .cloned()
+        .collect::<HashMap<_, _>>()
+        .into()
     }
 }

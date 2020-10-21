@@ -16,9 +16,8 @@ impl Values {
         }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item=(&str, &str)> {
-        self.inner.iter()
-            .map(|(k, v)| (k.as_str(), v.as_str()))
+    pub fn iter(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.inner.iter().map(|(k, v)| (k.as_str(), v.as_str()))
     }
 
     pub fn get(&self, k: &str) -> Option<&String> {
@@ -32,9 +31,7 @@ impl Values {
 
 impl From<HashMap<String, String>> for Values {
     fn from(h: HashMap<String, String>) -> Self {
-        Self {
-            inner: h,
-        }
+        Self { inner: h }
     }
 }
 
@@ -46,7 +43,8 @@ impl From<HashMap<String, String>> for Values {
 impl From<HashMap<&str, &str>> for Values {
     fn from(h: HashMap<&str, &str>) -> Self {
         Self {
-            inner: h.into_iter()
+            inner: h
+                .into_iter()
                 .map(|(k, v)| (k.to_string(), v.to_string()))
                 .collect(),
         }
@@ -56,7 +54,8 @@ impl From<HashMap<&str, &str>> for Values {
 impl From<&HashMap<&str, &str>> for Values {
     fn from(h: &HashMap<&str, &str>) -> Self {
         Self {
-            inner: h.into_iter()
+            inner: h
+                .into_iter()
                 .map(|(k, v)| (k.to_string(), v.to_string()))
                 .collect(),
         }

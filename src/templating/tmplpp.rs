@@ -1,11 +1,11 @@
 use std::str::FromStr;
 
-use super::{TemplatingEngine, RenderError};
+use super::{RenderError, TemplatingEngine};
 use crate::blueprint::Values;
 
 use pest::{
-    Parser as PestParser,
     iterators::{Pair, Pairs},
+    Parser as PestParser,
 };
 use pest_derive::Parser;
 use regex::Regex;
@@ -43,16 +43,14 @@ impl<'a> Template<'a> {
                     let name = pairs.next().unwrap().into_inner().as_str();
                     let elements = parse_elements(pairs.next().unwrap().into_inner())?;
                     Ok(Element::Editable(name, elements))
-                },
+                }
                 Rule::variable => Ok(Element::Var(pair.into_inner().as_str())),
-                _              => unreachable!(),
+                _ => unreachable!(),
             }
         }
 
         fn parse_elements(pairs: Pairs<Rule>) -> Result<Vec<Element>, TemplateParseError> {
-            pairs
-                .map(parse_element)
-                .collect::<Result<_, _>>()
+            pairs.map(parse_element).collect::<Result<_, _>>()
         }
 
         let template = Self::from_elements(parse_elements(pest_template)?);
@@ -61,9 +59,7 @@ impl<'a> Template<'a> {
     }
 
     fn from_elements(elements: Vec<Element<'a>>) -> Self {
-        Self {
-            elements,
-        }
+        Self { elements }
     }
 
     fn render_to_string(&self, values: &Values) -> Result<String, RenderError> {
@@ -72,33 +68,37 @@ impl<'a> Template<'a> {
         // TODO: Is there a DRYer way to write this?
         for element in self.elements.iter() {
             match element {
-                Element::RawText(text)        => result.push_str(text),
+                Element::RawText(text) => result.push_str(text),
                 Element::Editable(_, content) => {
                     for element in content {
                         match element {
-                            Element::RawText(text)  => result.push_str(text),
+                            Element::RawText(text) => result.push_str(text),
                             Element::Editable(_, _) => panic!("nested editables are illegal"), // TODO: Proper error handling here.
-                            Element::Var(var_name)  => if let Some(value) = values.get(var_name) {
-                                result.push_str(value);
-                            },
+                            Element::Var(var_name) => {
+                                if let Some(value) = values.get(var_name) {
+                                    result.push_str(value);
+                                }
+                            }
                         }
                     }
-                },
-                Element::Var(var_name)        => if let Some(value) = values.get(var_name) {
-                    result.push_str(value);
-                },
+                }
+                Element::Var(var_name) => {
+                    if let Some(value) = values.get(var_name) {
+                        result.push_str(value);
+                    }
+                }
             }
         }
 
         Ok(result)
     }
-    
+
     // TODO: Maybe memoize this somehow? Or create a separate TemplateWithValues
     // struct that holds the values and a pre-generated regex validator.
     fn regex(&self, values: &Values) -> Regex {
         let mut regex_str = String::from("^");
 
-        fn sanitize_string_literal(s: &str) ->  String {
+        fn sanitize_string_literal(s: &str) -> String {
             let mut result = s.replace("\\", "\\\\");
             result = result.replace("(", "\\(");
             result.replace(")", "\\)")
@@ -106,11 +106,15 @@ impl<'a> Template<'a> {
 
         for el in &self.elements {
             match el {
-                Element::RawText(text)     => regex_str.push_str(&sanitize_string_literal(text)),
-                Element::Var(var_name)     => if let Some(value) = values.get(var_name) {
-                    regex_str.push_str(&sanitize_string_literal(value));
-                },
-                Element::Editable(name, _) => regex_str.push_str(&format!("(?P<{}>(.|\\n)*)", name)),
+                Element::RawText(text) => regex_str.push_str(&sanitize_string_literal(text)),
+                Element::Var(var_name) => {
+                    if let Some(value) = values.get(var_name) {
+                        regex_str.push_str(&sanitize_string_literal(value));
+                    }
+                }
+                Element::Editable(name, _) => {
+                    regex_str.push_str(&format!("(?P<{}>(.|\\n)*)", name))
+                }
             }
         }
 
@@ -135,11 +139,13 @@ impl<'a> Template<'a> {
         // TODO: Is there a DRYer way to write this?
         for element in new_template.elements.iter() {
             match element {
-                Element::RawText(text)     => result.push_str(text),
+                Element::RawText(text) => result.push_str(text),
                 Element::Editable(name, _) => result.push_str(caps.name(name).unwrap().as_str()),
-                Element::Var(var_name)     => if let Some(value) = values.get(var_name) {
-                    result.push_str(value);
-                },
+                Element::Var(var_name) => {
+                    if let Some(value) = values.get(var_name) {
+                        result.push_str(value);
+                    }
+                }
             }
         }
 
@@ -157,7 +163,11 @@ impl Tmplpp {
 }
 
 impl TemplatingEngine for Tmplpp {
-    fn render_template<'v>(&self, template_str: &str, values: Values) -> Result<String, RenderError> {
+    fn render_template<'v>(
+        &self,
+        template_str: &str,
+        values: Values,
+    ) -> Result<String, RenderError> {
         let template = Template::from_str(template_str)?;
 
         Ok(template.render_to_string(&values)?)
@@ -166,9 +176,7 @@ impl TemplatingEngine for Tmplpp {
 
 impl From<TemplateParseError> for RenderError {
     fn from(e: TemplateParseError) -> Self {
-        RenderError {
-            inner: Box::new(e),
-        }
+        RenderError { inner: Box::new(e) }
     }
 }
 
@@ -178,18 +186,13 @@ impl From<TemplateParseError> for RenderError {
 mod tests {
     use std::collections::HashMap;
 
-    use super::{
-        Template,
-        Element,
-        Values,
-    };
+    use super::{Element, Template, Values};
 
     #[test]
     fn parse_raw_text() {
         let text = "and the mome raths outgrabe";
 
-        let template = Template::from_str(text)
-            .unwrap();
+        let template = Template::from_str(text).unwrap();
 
         assert_eq!(template.elements, [Element::RawText(text)]);
     }
@@ -198,117 +201,115 @@ mod tests {
     fn parse_raw_text_and_tags() {
         let text = "and the mome raths outgrabe {{ foo }} and {{ bar }}";
 
-        let template = Template::from_str(text)
-            .unwrap();
+        let template = Template::from_str(text).unwrap();
 
-        assert_eq!(template.elements, [
-            Element::RawText("and the mome raths outgrabe "),
-            Element::Var("foo"),
-            Element::RawText(" and "),
-            Element::Var("bar"),
-        ]);
+        assert_eq!(
+            template.elements,
+            [
+                Element::RawText("and the mome raths outgrabe "),
+                Element::Var("foo"),
+                Element::RawText(" and "),
+                Element::Var("bar"),
+            ]
+        );
     }
 
     #[test]
     fn parse_vars_regardless_of_whitespace() {
         let text = "and the mome raths outgrabe {{    foo    }} and {{bar}}";
 
-        let template = Template::from_str(text)
-            .unwrap();
+        let template = Template::from_str(text).unwrap();
 
-        assert_eq!(template.elements, [
-            Element::RawText("and the mome raths outgrabe "),
-            Element::Var("foo"),
-            Element::RawText(" and "),
-            Element::Var("bar"),
-        ]);
+        assert_eq!(
+            template.elements,
+            [
+                Element::RawText("and the mome raths outgrabe "),
+                Element::Var("foo"),
+                Element::RawText(" and "),
+                Element::Var("bar"),
+            ]
+        );
     }
 
     #[test]
     fn parse_consecutive_vars() {
         let text = "and the mome raths outgrabe {{ foo }}{{ bar }}";
 
-        let template = Template::from_str(text)
-            .unwrap();
+        let template = Template::from_str(text).unwrap();
 
-        assert_eq!(template.elements, [
-            Element::RawText("and the mome raths outgrabe "),
-            Element::Var("foo"),
-            Element::Var("bar"),
-        ]);
+        assert_eq!(
+            template.elements,
+            [
+                Element::RawText("and the mome raths outgrabe "),
+                Element::Var("foo"),
+                Element::Var("bar"),
+            ]
+        );
     }
 
     #[test]
     fn parse_a_simple_editable() {
         let text = "and the mome {{@ foo }}raths{{@ / }} outgrabe";
 
-        let template = Template::from_str(text)
-            .unwrap();
+        let template = Template::from_str(text).unwrap();
 
-        assert_eq!(template.elements, [
-            Element::RawText("and the mome "),
-            Element::Editable(
-                "foo",
-                vec!(Element::RawText("raths")),
-            ),
-            Element::RawText(" outgrabe"),
-        ]);
+        assert_eq!(
+            template.elements,
+            [
+                Element::RawText("and the mome "),
+                Element::Editable("foo", vec!(Element::RawText("raths")),),
+                Element::RawText(" outgrabe"),
+            ]
+        );
     }
 
     #[test]
     fn parse_an_editable_with_vars() {
         let text = "and the mome {{@ foo }}raths {{ bar }}{{@ / }} outgrabe";
 
-        let template = Template::from_str(text)
-            .unwrap();
+        let template = Template::from_str(text).unwrap();
 
-        assert_eq!(template.elements, [
-            Element::RawText("and the mome "),
-            Element::Editable(
-                "foo",
-                vec!(
-                    Element::RawText("raths "),
-                    Element::Var("bar"),
+        assert_eq!(
+            template.elements,
+            [
+                Element::RawText("and the mome "),
+                Element::Editable(
+                    "foo",
+                    vec!(Element::RawText("raths "), Element::Var("bar"),),
                 ),
-            ),
-            Element::RawText(" outgrabe"),
-        ]);
+                Element::RawText(" outgrabe"),
+            ]
+        );
     }
 
     #[test]
     fn strip_newlines_when_parsing_editables() {
         let text = "stuff\n{{@ foo }}\nstuff\n{{@ / }}";
 
-        let template = Template::from_str(text)
-            .unwrap();
+        let template = Template::from_str(text).unwrap();
 
-        assert_eq!(template.elements, [
-            Element::RawText("stuff\n"),
-            Element::Editable(
-                "foo",
-                vec!(
-                    Element::RawText("stuff"),
-                ),
-            ),
-        ]);
+        assert_eq!(
+            template.elements,
+            [
+                Element::RawText("stuff\n"),
+                Element::Editable("foo", vec!(Element::RawText("stuff"),),),
+            ]
+        );
     }
 
     #[test]
     fn strip_only_one_newline_when_parsing_editables() {
         let text = "stuff\n{{@ foo }}\n\nstuff\n\n\n{{@ / }}";
 
-        let template = Template::from_str(text)
-            .unwrap();
+        let template = Template::from_str(text).unwrap();
 
-        assert_eq!(template.elements, [
-            Element::RawText("stuff\n"),
-            Element::Editable(
-                "foo",
-                vec!(
-                    Element::RawText("\nstuff\n\n"),
-                ),
-            ),
-        ]);
+        assert_eq!(
+            template.elements,
+            [
+                Element::RawText("stuff\n"),
+                Element::Editable("foo", vec!(Element::RawText("\nstuff\n\n"),),),
+            ]
+        );
     }
 
     #[test]
@@ -331,14 +332,20 @@ mod tests {
     fn render_raw_text() {
         let template = Template::from_str("All mimsy were the borogoves.").unwrap();
 
-        assert_eq!(template.render_to_string(&Values::new()).unwrap(), "All mimsy were the borogoves.");
+        assert_eq!(
+            template.render_to_string(&Values::new()).unwrap(),
+            "All mimsy were the borogoves."
+        );
     }
 
     #[test]
     fn render_empty_var() {
         let template = Template::from_str("All mimsy were {{ foo }} borogoves.").unwrap();
 
-        assert_eq!(template.render_to_string(&Values::new()).unwrap(), "All mimsy were  borogoves.");
+        assert_eq!(
+            template.render_to_string(&Values::new()).unwrap(),
+            "All mimsy were  borogoves."
+        );
     }
 
     #[test]
@@ -346,18 +353,23 @@ mod tests {
         let template = Template::from_str("All mimsy were {{ foo }} borogoves.").unwrap();
 
         assert_eq!(
-            template.render_to_string(&[("foo", "the")].iter()
-                .cloned()
-                .collect::<HashMap<_, _>>()
-                .into()
-            ).unwrap(),
+            template
+                .render_to_string(
+                    &[("foo", "the")]
+                        .iter()
+                        .cloned()
+                        .collect::<HashMap<_, _>>()
+                        .into()
+                )
+                .unwrap(),
             "All mimsy were the borogoves.",
         );
     }
 
     #[test]
     fn render_editable_block() {
-        let template = Template::from_str("All mimsy were {{@ foo }}the{{@ / }} borogoves.").unwrap();
+        let template =
+            Template::from_str("All mimsy were {{@ foo }}the{{@ / }} borogoves.").unwrap();
 
         assert_eq!(
             template.render_to_string(&Values::new()).unwrap(),
@@ -367,14 +379,19 @@ mod tests {
 
     #[test]
     fn render_editable_block_with_vars_inside() {
-        let template = Template::from_str("All {{@ foo }}mimsy {{ bar }} the{{@ / }} borogoves.").unwrap();
+        let template =
+            Template::from_str("All {{@ foo }}mimsy {{ bar }} the{{@ / }} borogoves.").unwrap();
 
         assert_eq!(
-            template.render_to_string(&[("bar", "were")].iter()
-                .cloned()
-                .collect::<HashMap<_, _>>()
-                .into()
-            ).unwrap(),
+            template
+                .render_to_string(
+                    &[("bar", "were")]
+                        .iter()
+                        .cloned()
+                        .collect::<HashMap<_, _>>()
+                        .into()
+                )
+                .unwrap(),
             "All mimsy were the borogoves.",
         );
     }
@@ -386,23 +403,33 @@ mod tests {
         let template = Template::from_str("All mimsy were the borogoves.").unwrap();
 
         assert!(template.validate_generated_output(&Values::new(), "All mimsy were the borogoves."));
-        assert!(!template.validate_generated_output(&Values::new(), "All mimsy were the borogoves. "));
+        assert!(
+            !template.validate_generated_output(&Values::new(), "All mimsy were the borogoves. ")
+        );
     }
 
     #[test]
     fn validate_simple_text_with_newlines() {
         let template = Template::from_str("All mimsy\nwere the borogoves.").unwrap();
 
-        assert!(template.validate_generated_output(&Values::new(), "All mimsy\nwere the borogoves."));
-        assert!(!template.validate_generated_output(&Values::new(), "All mimsy\nwere the borogoves. "));
-        assert!(!template.validate_generated_output(&Values::new(), "All mimsy\nwere the borogoves.\nAll mimsy\nwere the borogoves."));
+        assert!(
+            template.validate_generated_output(&Values::new(), "All mimsy\nwere the borogoves.")
+        );
+        assert!(
+            !template.validate_generated_output(&Values::new(), "All mimsy\nwere the borogoves. ")
+        );
+        assert!(!template.validate_generated_output(
+            &Values::new(),
+            "All mimsy\nwere the borogoves.\nAll mimsy\nwere the borogoves."
+        ));
     }
 
     #[test]
     fn validate_output_with_vars() {
         let template = Template::from_str("All mimsy {{ foo }} the borogoves.").unwrap();
 
-        let values: Values = [("foo", "were")].iter()
+        let values: Values = [("foo", "were")]
+            .iter()
             .cloned()
             .collect::<HashMap<_, _>>()
             .into();
@@ -418,9 +445,11 @@ mod tests {
         assert!(template.validate_generated_output(&Values::new(), "All mimsy were the borogoves."));
         // We're allowed to edit the text inside the editable...
         assert!(template.validate_generated_output(&Values::new(), "All mimsy was the borogoves."));
-        assert!(template.validate_generated_output(&Values::new(), "All mimsy asd fsd sdf the borogoves."));
+        assert!(template
+            .validate_generated_output(&Values::new(), "All mimsy asd fsd sdf the borogoves."));
         // ...but we shouldn't edit the text outside of the editable.
-        assert!(!template.validate_generated_output(&Values::new(), "All mimsy were the borogoves. Stuff."));
+        assert!(!template
+            .validate_generated_output(&Values::new(), "All mimsy were the borogoves. Stuff."));
     }
 
     // Upgrade tests
@@ -444,7 +473,8 @@ mod tests {
         let v1 = Template::from_str("All mimsy {{ foo }} the borogoves.").unwrap();
         let v2 = Template::from_str("All mimsy {{ foo }} my borogoves.").unwrap();
 
-        let values: Values = [("foo", "were")].iter()
+        let values: Values = [("foo", "were")]
+            .iter()
             .cloned()
             .collect::<HashMap<_, _>>()
             .into();
@@ -472,7 +502,8 @@ mod tests {
 
     #[test]
     fn upgrade_complex_example() {
-        let v1 = Template::from_str(r#"
+        let v1 = Template::from_str(
+            r#"
     import math
     // User-defined imports go after this line.
     {{@ imports }}{{@ / }}
@@ -483,9 +514,11 @@ mod tests {
     {{@ / }}
 
     // Foo
-    "#)
-            .unwrap();
-        let v2 = Template::from_str(r#"
+    "#,
+        )
+        .unwrap();
+        let v2 = Template::from_str(
+            r#"
     import math
     from foo import bar
 
@@ -498,8 +531,9 @@ mod tests {
 
     // User-defined imports go after this line.
     {{@ imports }}{{@ / }}
-    "#)
-            .unwrap();
+    "#,
+        )
+        .unwrap();
 
         let modified_output = r#"
     import math
@@ -529,6 +563,9 @@ mod tests {
     import that
     "#;
 
-        assert_eq!(v1.upgrade_to(&v2, &Values::new(), modified_output), expected_output_after_upgrade);
+        assert_eq!(
+            v1.upgrade_to(&v2, &Values::new(), modified_output),
+            expected_output_after_upgrade
+        );
     }
 }

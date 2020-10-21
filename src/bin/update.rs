@@ -1,7 +1,7 @@
 use anyhow::Error;
 use clap::ArgMatches;
 
-use rendr::blueprint::{Blueprint};
+use rendr::blueprint::Blueprint;
 use rendr::project::Project;
 
 pub fn update(args: &ArgMatches) -> Result<(), Error> {
