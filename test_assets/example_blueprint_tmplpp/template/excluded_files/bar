@@ -1,0 +1,4 @@
+This shouldn't be put through the templating engine because it's in exclusions
+in the metadata file.
+
+{{ name }} <- shouldn't be filled in by templating engine

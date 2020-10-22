@@ -1,8 +1,8 @@
 name: rendr
 about: A project scaffolding tool
 settings:
-  - ArgRequiredElseHelp
-  - StrictUtf8
+- ArgRequiredElseHelp
+- StrictUtf8
 args:
 subcommands:
   - init:
@@ -57,3 +57,25 @@ subcommands:
             long: ssh-key
             help: The path to the private SSH key for git auth
             takes_value: true
+  - check:
+      about: Checks whether a generated project can still be safely updated
+      args:
+      - project:
+          short: p
+          long: project
+          help: The path to the project
+          takes_value: true
+  - update:
+      about: Updates a generated project to a new blueprint version
+      args:
+      - project:
+          short: p
+          long: project
+          help: The path to the project
+          takes_value: true
+      - blueprint:
+          short: b
+          long: blueprint
+          help: The blueprint to update to
+          takes_value: true
+          required: true

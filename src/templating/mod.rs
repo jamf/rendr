@@ -2,20 +2,19 @@
 //! and values to templating engines. It abstracts rendering those away.
 
 mod mustache;
+pub mod tmplpp;
 pub use self::mustache::Mustache;
+pub use self::tmplpp::Tmplpp;
 
-use std::collections::HashMap;
+use crate::blueprint::Values;
+
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt::Formatter;
 
 /// The trait for integrating templating engines.
 pub trait TemplatingEngine {
-    fn render_template(
-        &self,
-        template: &str,
-        values: &HashMap<&str, &str>,
-    ) -> Result<String, RenderError>;
+    fn render_template(&self, template: &str, values: Values) -> Result<String, RenderError>;
 }
 
 /// A type representing any error that could happen when attempting to render

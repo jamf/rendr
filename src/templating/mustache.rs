@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use super::{RenderError, TemplatingEngine};
+use crate::blueprint::Values;
 
 /// [{{ mustache }}](https://mustache.github.io/) is a simple, logic-less templating engine.
 pub struct Mustache {}
@@ -12,11 +11,7 @@ impl Mustache {
 }
 
 impl TemplatingEngine for Mustache {
-    fn render_template(
-        &self,
-        template: &str,
-        values: &HashMap<&str, &str>,
-    ) -> Result<String, RenderError> {
+    fn render_template(&self, template: &str, values: Values) -> Result<String, RenderError> {
         let template = mustache::compile_str(template)?;
 
         Ok(template.render_to_string(&values)?)
@@ -31,6 +26,8 @@ impl From<mustache::Error> for RenderError {
 
 #[test]
 fn render_valid_template() {
+    use std::collections::HashMap;
+
     let template = "name: {{ name }}, value: {{ value }}";
 
     let values: HashMap<_, _> = [("name", "foo"), ("value", "bar"), ("asd", "dsa")]
@@ -39,7 +36,9 @@ fn render_valid_template() {
         .collect();
 
     assert_eq!(
-        Mustache::new().render_template(template, &values).unwrap(),
+        Mustache::new()
+            .render_template(template, values.into())
+            .unwrap(),
         "name: foo, value: bar",
     );
 }
