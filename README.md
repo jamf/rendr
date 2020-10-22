@@ -23,6 +23,14 @@ Here are just a few possible use cases:
 * Include CI/CD standards baked into projects from the start, easily kept up to date
 * Simplify repeated patterns like creating new microservices, libraries, or submodules on an existing project
 
+### Sample blueprints
+
+Check out the sample blueprints to get a feel for what is possible:
+* https://github.com/jamf/rendr-sample-blueprint-hello-world
+* https://github.com/jamf/rendr-sample-blueprint-go-microservice
+
+Creating your own blueprint is easy! The details are documented in the [User Guide](https://jamf.github.io/rendr/).
+
 ## Installation
 
 ### Homebrew
