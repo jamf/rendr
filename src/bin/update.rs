@@ -12,7 +12,7 @@ pub fn update(args: &ArgMatches) -> Result<(), Error> {
     // Attempt to parse the provided project.
     let project = Project::new(&project_path)?;
 
-    project.update(&new_blueprint)?;
+    project.upgrade_blueprint_with_templates(&new_blueprint)?;
 
     Ok(())
 }

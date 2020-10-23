@@ -68,3 +68,26 @@ impl From<&HashMap<&str, &str>> for Values {
         }
     }
 }
+
+impl From<clap::Values<'_>> for Values {
+    fn from(h: clap::Values) -> Self {
+        Self {
+            inner: h
+                .into_iter()
+                .map(|s| {
+                    let (k, v) = parse_value(s).unwrap();
+                    (k.to_string(), v.to_string())
+                })
+                .collect(),
+        }
+    }
+}
+
+fn parse_value(s: &str) -> Result<(&str, &str), String> {
+    let pos = s.find(":").ok_or(format!("Invalid value `{}`", s))?;
+
+    let mut result = s.split_at(pos);
+    result.1 = &result.1[1..];
+
+    Ok((result.0, result.1))
+}
