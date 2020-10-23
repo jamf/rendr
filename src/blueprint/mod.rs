@@ -27,9 +27,9 @@ pub use values::Values;
 type DynError = Box<dyn Error>;
 
 pub struct Blueprint {
-    metadata: BlueprintMetadata,
-    source: Source,
-    post_script: Option<Script>,
+    pub metadata: BlueprintMetadata,
+    pub source: Source,
+    pub post_script: Option<Script>,
 }
 
 impl Blueprint {
@@ -59,12 +59,12 @@ impl Blueprint {
     }
 
     fn find_scripts(&mut self) -> Result<(), BlueprintInitError> {
-        self.post_script = self.find_script("post-render")?;
+        self.post_script = self.find_script("post-render.sh")?;
 
         Ok(())
     }
 
-    fn find_script(&mut self, script: &str) -> Result<Option<Script>, BlueprintInitError> {
+    fn find_script(&self, script: &str) -> Result<Option<Script>, BlueprintInitError> {
         let mut script_path = PathBuf::new();
         script_path.push(
             self.source
@@ -73,7 +73,7 @@ impl Blueprint {
                 .map_err(|e| BlueprintInitError::ScriptLookupError(e))?,
         );
         script_path.push("scripts");
-        script_path.push(format!("{}.sh", script));
+        script_path.push(format!("{}", script));
 
         if !script_path.exists() {
             debug!(
@@ -162,12 +162,52 @@ impl Blueprint {
         }
 
         let source = self.source.to_string(output_dir);
+        self.generate_rendr_file(&source, &output_dir, &values)?;
 
-        debug!("Generating .rendr.yaml file:");
-        debug!("  source: {}", source);
-        debug!("  output_dir: {}", output_dir.display());
-        debug!("  values: {:?}", values);
-        self.generate_rendr_file(&source, &output_dir, values)?;
+        Ok(())
+    }
+
+    pub fn render_upgrade<TE: TemplatingEngine>(
+        &self,
+        engine: &TE,
+        values: &Values,
+        output_dir: &Path,
+        source: &str,
+    ) -> Result<(), DynError> {
+        info!("Upgrading to blueprint version {}", &self.metadata.version);
+        debug!("Root project dir {:?}", &output_dir);
+
+        for file in self.files() {
+            let file = file?;
+            let path = file.path();
+            let output_path = output_dir.join(file.path_from_template_root());
+
+            if path.is_file() {
+                if self.is_excluded(&file.path_from_template_root) {
+                    debug!(
+                        "Copying {:?} to {:?} without templating.",
+                        &path, &output_path
+                    );
+                    fs::copy(path, output_path)?;
+                } else if output_path.exists() {
+                    debug!("Skipping {:?}, file already exists", &path);
+                } else {
+                    debug!("Using template {:?} to render {:?}", &path, &output_path);
+                    let contents = fs::read_to_string(&path)?;
+                    let contents = engine.render_template(&contents, values.clone())?;
+                    fs::write(output_path, &contents)?;
+                }
+            } else if path.is_dir() {
+                if !output_path.is_dir() {
+                    debug!("Creating directory {:?}", &output_path);
+                    fs::create_dir(&output_path)?;
+                }
+            }
+        }
+
+        let scripts = self.get_upgrade_scripts();
+        self.run_upgrade_scripts(scripts, output_dir, values)?;
+        self.generate_rendr_file(&source, &output_dir, &values)?;
 
         Ok(())
     }
@@ -178,12 +218,50 @@ impl Blueprint {
         output_dir: &Path,
         values: &Values,
     ) -> Result<(), DynError> {
+        debug!("Generating .rendr.yaml file:");
+        debug!("  source: {}", source);
+        debug!("  output_dir: {}", output_dir.display());
+        debug!("  values: {:?}", values);
         let path = output_dir.join(Path::new(".rendr.yaml"));
         let config = RendrConfig::new(source.to_string().clone(), &self.metadata, values.clone());
         let yaml = serde_yaml::to_string(&config)?;
         let mut file = std::fs::File::create(path)?;
 
         file.write_all(yaml.as_bytes())?;
+
+        Ok(())
+    }
+
+    pub fn get_upgrade_scripts(&self) -> Vec<&UpgradeSpec> {
+        self.metadata
+            .upgrades
+            .iter()
+            .filter(|it| it.version == self.metadata.version)
+            .collect()
+    }
+
+    fn run_upgrade_scripts(
+        &self,
+        scripts: Vec<&UpgradeSpec>,
+        output_dir: &Path,
+        values: &Values,
+    ) -> Result<(), DynError> {
+        let target_version = self.metadata.version;
+        debug!(
+            "Running {} upgrade script(s) for version {}",
+            scripts.len(),
+            target_version
+        );
+
+        for script in scripts {
+            if script.version == target_version {
+                if let Some(mut s) = self.find_script(&script.script).unwrap() {
+                    s.executable = Some(String::from(&script.executable));
+                    println!("Running upgrade script: {}", s.name);
+                    s.run(output_dir, values)?;
+                }
+            }
+        }
 
         Ok(())
     }
@@ -214,12 +292,6 @@ pub struct RendrConfig {
     values: Values,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct RendrConfigValue {
-    name: String,
-    value: String,
-}
-
 impl RendrConfig {
     fn new(source: String, metadata: &BlueprintMetadata, values: Values) -> Self {
         RendrConfig {
@@ -238,6 +310,30 @@ impl RendrConfig {
 
     pub fn blueprint(&self) -> Result<Blueprint, BlueprintInitError> {
         Blueprint::new(&self.source, None)
+    }
+
+    pub fn load(metadata_file: &PathBuf) -> Result<Option<RendrConfig>, DynError> {
+        let yaml = fs::read_to_string(metadata_file)?;
+        let config: RendrConfig = serde_yaml::from_str(&yaml)?;
+
+        Ok(Some(config))
+    }
+}
+
+impl Display for RendrConfig {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        writeln!(f, "name: {}", &self.name)?;
+        writeln!(f, "version: {}", &self.version)?;
+        writeln!(f, "description: {}", &self.description)?;
+        writeln!(f, "author: {}", &self.author)?;
+        writeln!(f, "source: {}", &self.source)?;
+        writeln!(f, "values:")?;
+        for (name, value) in self.values.iter() {
+            writeln!(f, "- name: {}", name)?;
+            writeln!(f, "  value: {}", value)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -300,7 +396,8 @@ impl File {
     }
 }
 
-struct Script {
+pub struct Script {
+    executable: Option<String>,
     name: String,
     path: PathBuf,
 }
@@ -308,6 +405,7 @@ struct Script {
 impl Script {
     fn new(name: &str, path: PathBuf) -> Self {
         Script {
+            executable: None,
             name: name.to_string(),
             path: path,
         }
@@ -317,12 +415,24 @@ impl Script {
         info!("Running blueprint script: {}", &self.name);
 
         #[cfg(debug)]
+        debug!("  Blueprint script executable: {:?}", &self.executable);
         debug!("  Blueprint script full path: {:?}", &self.path);
         debug!("  Blueprint script working dir: {:?}", working_dir);
 
+        let values_flags = values
+            .iter()
+            .map(|i| format!("--value {}={}", i.0, i.1))
+            .collect::<Vec<String>>()
+            .join(" ");
+        let command = match &self.executable {
+            Some(executable) => format!("{} {} {}", executable, &self.path.display(), values_flags),
+            None => format!("{}", &self.path.display()),
+        };
+
+        debug!("  Executing command: {}", command);
         let output = Command::new("sh")
             .arg("-c")
-            .arg(&self.path)
+            .arg(command)
             .envs(values.map())
             .current_dir(working_dir)
             .stdout(Stdio::inherit())
@@ -377,17 +487,19 @@ impl Display for Blueprint {
 }
 
 #[derive(Deserialize)]
-struct BlueprintMetadata {
-    name: String,
-    version: u32,
-    author: String,
-    description: String,
+pub struct BlueprintMetadata {
+    pub name: String,
+    pub version: u32,
+    pub author: String,
+    pub description: String,
     values: Vec<ValueSpec>,
     #[serde(default)]
     exclusions: Vec<Pattern>,
     #[serde(alias = "git-init")]
     #[serde(default)]
     git_init: bool,
+    #[serde(default)]
+    upgrades: Vec<UpgradeSpec>,
 }
 
 #[derive(Deserialize)]
@@ -397,6 +509,13 @@ pub struct ValueSpec {
     pub default: Option<String>,
     #[serde(default)]
     pub required: bool,
+}
+
+#[derive(Deserialize)]
+pub struct UpgradeSpec {
+    pub version: u32,
+    pub script: String,
+    pub executable: String,
 }
 
 impl PartialEq for ValueSpec {

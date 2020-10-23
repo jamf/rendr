@@ -27,6 +27,13 @@ impl Values {
     pub fn map(&self) -> &HashMap<String, String> {
         &self.inner
     }
+
+    pub fn map_str(&self) -> HashMap<&str, &str> {
+        self.inner
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.as_str()))
+            .collect()
+    }
 }
 
 impl From<HashMap<String, String>> for Values {
