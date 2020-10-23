@@ -16,10 +16,10 @@ use rendr::blueprint::ValueSpec;
 type DynError = Box<dyn Error>;
 
 pub fn upgrade(args: &ArgMatches) -> Result<(), DynError> {
-    // TODO this variable is not yet used, the upgrade target must always be the latest
     let dry_run = args.is_present("dry-run");
     debug!("Upgrade dry run mode: {}", dry_run);
-    let blueprint_version = args.value_of("blueprint-version").unwrap_or("latest");
+    // TODO this variable is not yet used, the upgrade target must always be the latest
+    let _blueprint_version = args.value_of("blueprint-version").unwrap_or("latest");
     let working_dir = match env::current_dir() {
         Ok(dir) => dir,
         Err(e) => return Err(Box::new(e)),

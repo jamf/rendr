@@ -281,28 +281,6 @@ pub struct RendrConfig {
     values: Values,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct RendrConfigValue {
-    pub name: String,
-    pub value: String,
-}
-
-impl RendrConfigValue {
-    fn new(name: String, value: String) -> Self {
-        RendrConfigValue {
-            name,
-            value,
-        }
-    }
-
-    fn clone(&self) -> Self {
-        RendrConfigValue {
-            name: String::from(self.name.as_str()),
-            value: String::from(self.value.as_str()),
-        }
-    }
-}
-
 impl RendrConfig {
     fn new(source: String, metadata: &BlueprintMetadata, values: Values) -> Self {
         RendrConfig {
@@ -340,8 +318,8 @@ impl Display for RendrConfig {
         writeln!(f, "source: {}", &self.source)?;
         writeln!(f, "values:")?;
         for (name, value) in self.values.iter() {
-            writeln!(f, "- name: {}", name);
-            writeln!(f, "  value: {}", value);
+            writeln!(f, "- name: {}", name)?;
+            writeln!(f, "  value: {}", value)?;
         }
 
         Ok(())
