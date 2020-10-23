@@ -1,2 +1,8 @@
 docs/build/index.html:
-	mkdocs build
+	cd docs && mdbook build
+
+open:
+	open docs/book/index.html
+
+clean:
+	rm -rf docs/book
