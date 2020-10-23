@@ -168,11 +168,11 @@ impl Blueprint {
     }
 
     pub fn render_upgrade<TE: TemplatingEngine>(
-            &self,
-            engine: &TE,
-            values: &Values,
-            output_dir: &Path,
-            source: &str,
+        &self,
+        engine: &TE,
+        values: &Values,
+        output_dir: &Path,
+        source: &str,
     ) -> Result<(), DynError> {
         info!("Upgrading to blueprint version {}", &self.metadata.version);
         debug!("Root project dir {:?}", &output_dir);
@@ -184,20 +184,20 @@ impl Blueprint {
 
             if path.is_file() {
                 if self.is_excluded(&file.path_from_template_root) {
-                    debug!("Copying {:?} to {:?} without templating.", &path, &output_path);
+                    debug!(
+                        "Copying {:?} to {:?} without templating.",
+                        &path, &output_path
+                    );
                     fs::copy(path, output_path)?;
-                }
-                else if output_path.exists() {
+                } else if output_path.exists() {
                     debug!("Skipping {:?}, file already exists", &path);
-                }
-                else {
+                } else {
                     debug!("Using template {:?} to render {:?}", &path, &output_path);
                     let contents = fs::read_to_string(&path)?;
                     let contents = engine.render_template(&contents, values.clone())?;
                     fs::write(output_path, &contents)?;
                 }
-            }
-            else if path.is_dir() {
+            } else if path.is_dir() {
                 if !output_path.is_dir() {
                     debug!("Creating directory {:?}", &output_path);
                     fs::create_dir(&output_path)?;
@@ -233,14 +233,25 @@ impl Blueprint {
     }
 
     pub fn get_upgrade_scripts(&self) -> Vec<&UpgradeSpec> {
-        self.metadata.upgrades.iter()
+        self.metadata
+            .upgrades
+            .iter()
             .filter(|it| it.version == self.metadata.version)
             .collect()
     }
 
-    fn run_upgrade_scripts(&self, scripts: Vec<&UpgradeSpec>, output_dir: &Path, values: &Values) -> Result<(), DynError> {
+    fn run_upgrade_scripts(
+        &self,
+        scripts: Vec<&UpgradeSpec>,
+        output_dir: &Path,
+        values: &Values,
+    ) -> Result<(), DynError> {
         let target_version = self.metadata.version;
-        debug!("Running {} upgrade script(s) for version {}", scripts.len(), target_version);
+        debug!(
+            "Running {} upgrade script(s) for version {}",
+            scripts.len(),
+            target_version
+        );
 
         for script in scripts {
             if script.version == target_version {
@@ -408,7 +419,8 @@ impl Script {
         debug!("  Blueprint script full path: {:?}", &self.path);
         debug!("  Blueprint script working dir: {:?}", working_dir);
 
-        let values_flags = values.iter()
+        let values_flags = values
+            .iter()
             .map(|i| format!("--value {}={}", i.0, i.1))
             .collect::<Vec<String>>()
             .join(" ");

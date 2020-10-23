@@ -1,7 +1,7 @@
 mod check;
+mod info;
 mod init;
 mod update;
-mod info;
 mod upgrade;
 
 use std::env;

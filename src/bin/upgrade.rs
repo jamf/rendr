@@ -8,10 +8,10 @@ use clap::ArgMatches;
 use log::{debug, error};
 use text_io::read;
 
-use rendr::templating;
 use rendr::blueprint::Blueprint;
 use rendr::blueprint::RendrConfig;
 use rendr::blueprint::ValueSpec;
+use rendr::templating;
 
 type DynError = Box<dyn Error>;
 
@@ -24,7 +24,10 @@ pub fn upgrade(args: &ArgMatches) -> Result<(), DynError> {
         Ok(dir) => dir,
         Err(e) => return Err(Box::new(e)),
     };
-    let dir = Path::new(args.value_of("dir").unwrap_or(working_dir.to_str().unwrap()));
+    let dir = Path::new(
+        args.value_of("dir")
+            .unwrap_or(working_dir.to_str().unwrap()),
+    );
 
     let config = match load_rendr_config(&dir) {
         Ok(c) => c,
@@ -34,7 +37,7 @@ pub fn upgrade(args: &ArgMatches) -> Result<(), DynError> {
     // Attempt to read the provided blueprint
     let relative_source = dir.join(&config.source);
     let blueprint = match relative_source.exists() {
-        true =>  Blueprint::new(relative_source.to_str().unwrap(), None)?,
+        true => Blueprint::new(relative_source.to_str().unwrap(), None)?,
         false => Blueprint::new(config.source.as_str(), None)?,
     };
 
@@ -42,8 +45,11 @@ pub fn upgrade(args: &ArgMatches) -> Result<(), DynError> {
 
     // Check if blueprint version can be updated
     if blueprint.metadata.version == config.version {
-        println!("Project is already on the latest blueprint version (v{})", config.version);
-        return Ok(())
+        println!(
+            "Project is already on the latest blueprint version (v{})",
+            config.version
+        );
+        return Ok(());
     } else if blueprint.metadata.version < config.version {
         println!("Project is on a newer version of the blueprint. Something might be wrong.");
         println!("  Project version:   {}", config.version);
@@ -51,7 +57,10 @@ pub fn upgrade(args: &ArgMatches) -> Result<(), DynError> {
         panic!("Canceling upgrade");
     }
 
-    println!("Upgrading project from blueprint version {}", blueprint.metadata.version);
+    println!(
+        "Upgrading project from blueprint version {}",
+        blueprint.metadata.version
+    );
 
     // Initialize values with blueprint defaults
     let mut values: HashMap<_, _> = blueprint.default_values().collect();
@@ -67,14 +76,16 @@ pub fn upgrade(args: &ArgMatches) -> Result<(), DynError> {
     }
 
     // Figure out which required values are still missing
-    let missing_values = blueprint.required_values()
+    let missing_values = blueprint
+        .required_values()
         .filter(|v| values.get::<str>(&v.name).is_none());
 
     // Prompt for the missing values and collect them
     let prompt_values_owned: Vec<_> = prompt_for_values(missing_values).collect();
 
     // Merge the values from prompts in
-    let prompt_values: Vec<_> = prompt_values_owned.iter()
+    let prompt_values: Vec<_> = prompt_values_owned
+        .iter()
         .map(|(k, v)| (*k, v.as_str()))
         .collect();
     values.extend(prompt_values);
@@ -113,7 +124,9 @@ fn load_rendr_config(dir: &Path) -> Result<RendrConfig, DynError> {
 // TODO move this code to a common spot, copied from init.rs
 type ValueFromPrompt<'s> = (&'s str, String);
 
-fn prompt_for_values<'s>(values: impl Iterator<Item = &'s ValueSpec>) -> impl Iterator<Item = ValueFromPrompt<'s>> {
+fn prompt_for_values<'s>(
+    values: impl Iterator<Item = &'s ValueSpec>,
+) -> impl Iterator<Item = ValueFromPrompt<'s>> {
     values.map(prompt_for_value)
 }
 
@@ -124,12 +137,10 @@ fn prompt_for_value(value: &ValueSpec) -> ValueFromPrompt<'_> {
 }
 
 fn parse_value(s: &str) -> Result<(&str, &str), String> {
-    let pos = s.find(":")
-        .ok_or(format!("Invalid value `{}`", s))?;
+    let pos = s.find(":").ok_or(format!("Invalid value `{}`", s))?;
 
     let mut result = s.split_at(pos);
     result.1 = &result.1[1..];
 
     Ok((result.0, result.1))
 }
-

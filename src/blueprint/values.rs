@@ -29,7 +29,10 @@ impl Values {
     }
 
     pub fn map_str(&self) -> HashMap<&str, &str> {
-        self.inner.iter().map(|(name, value)| (name.as_str(), value.as_str())).collect()
+        self.inner
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.as_str()))
+            .collect()
     }
 }
 
