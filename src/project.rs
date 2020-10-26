@@ -95,15 +95,15 @@ impl<'p> Project<'p> {
         Ok(())
     }
 
-    pub fn upgrade_blueprint_with_templates(&self, new_blueprint: &Blueprint) -> Result<(), UpgradeError> {
-        let old_blueprint = self.blueprint()?;
+    pub fn upgrade_blueprint_with_templates(&self) -> Result<(), UpgradeError> {
+        let blueprint = self.blueprint()?;
         let values = self.values();
 
-        for file in old_blueprint.files() {
+        for file in blueprint.files() {
             let file = file?;
             let rel_path = file.path_from_template_root();
 
-            if old_blueprint.is_excluded(rel_path) || file.path().is_dir() {
+            if blueprint.is_excluded(rel_path) || file.path().is_dir() {
                 continue;
             }
 
@@ -113,7 +113,7 @@ impl<'p> Project<'p> {
                 .map_err(|e| UpgradeError::OldTemplateParseError(e))?;
 
             let new_template =
-                std::fs::read_to_string(new_blueprint.path().join("template").join(rel_path))
+                std::fs::read_to_string(blueprint.path().join("template").join(rel_path))
                     .map_err(|e| UpgradeError::NewTemplateReadError(e))?;
             let new_template = Template::from_str(&new_template)
                 .map_err(|e| UpgradeError::NewTemplateParseError(e))?;

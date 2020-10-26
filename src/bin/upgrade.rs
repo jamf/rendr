@@ -3,17 +3,9 @@ use std::path::Path;
 
 use anyhow::{anyhow, Error};
 use clap::ArgMatches;
-use log::error;
-use thiserror;
 
 use rendr::blueprint::Values;
 use rendr::project::Project;
-
-#[derive(thiserror::Error, Debug)]
-pub enum UpgradeError {
-    #[error("error upgrading blueprint")]
-    BlueprintUpgradeError(#[source] std::io::Error),
-}
 
 pub fn upgrade(args: &ArgMatches) -> Result<(), Error> {
 
