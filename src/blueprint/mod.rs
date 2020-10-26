@@ -122,6 +122,7 @@ impl Blueprint {
         engine: &TE,
         values: &Values,
         output_dir: &Path,
+        dry_run: bool,
     ) -> Result<(), DynError> {
         // Create our output directory if it doesn't exist yet.
         debug!("Creating root project dir {:?}", &output_dir);
@@ -162,7 +163,7 @@ impl Blueprint {
         }
 
         let source = self.source.to_string(output_dir);
-        self.generate_rendr_file(&source, &output_dir, &values)?;
+        self.generate_rendr_file(&source, &output_dir, &values, dry_run)?;
 
         Ok(())
     }
@@ -173,6 +174,7 @@ impl Blueprint {
         values: &Values,
         output_dir: &Path,
         source: &str,
+        dry_run: bool,
     ) -> Result<(), DynError> {
         info!("Upgrading to blueprint version {}", &self.metadata.version);
         debug!("Root project dir {:?}", &output_dir);
@@ -188,26 +190,32 @@ impl Blueprint {
                         "Copying {:?} to {:?} without templating.",
                         &path, &output_path
                     );
-                    fs::copy(path, output_path)?;
+                    if !dry_run {
+                        fs::copy(path, output_path)?;
+                    }
                 } else if output_path.exists() {
                     debug!("Skipping {:?}, file already exists", &path);
                 } else {
                     debug!("Using template {:?} to render {:?}", &path, &output_path);
                     let contents = fs::read_to_string(&path)?;
                     let contents = engine.render_template(&contents, values.clone())?;
-                    fs::write(output_path, &contents)?;
+                    if !dry_run {
+                        fs::write(output_path, &contents)?;
+                    }
                 }
             } else if path.is_dir() {
                 if !output_path.is_dir() {
                     debug!("Creating directory {:?}", &output_path);
-                    fs::create_dir(&output_path)?;
+                    if !dry_run {
+                        fs::create_dir(&output_path)?;
+                    }
                 }
             }
         }
 
         let scripts = self.get_upgrade_scripts();
-        self.run_upgrade_scripts(scripts, output_dir, values)?;
-        self.generate_rendr_file(&source, &output_dir, &values)?;
+        self.run_upgrade_scripts(scripts, output_dir, values, dry_run)?;
+        self.generate_rendr_file(&source, &output_dir, &values, dry_run)?;
 
         Ok(())
     }
@@ -217,17 +225,21 @@ impl Blueprint {
         source: &str,
         output_dir: &Path,
         values: &Values,
+        dry_run: bool,
     ) -> Result<(), DynError> {
         debug!("Generating .rendr.yaml file:");
         debug!("  source: {}", source);
         debug!("  output_dir: {}", output_dir.display());
         debug!("  values: {:?}", values);
+
         let path = output_dir.join(Path::new(".rendr.yaml"));
         let config = RendrConfig::new(source.to_string().clone(), &self.metadata, values.clone());
         let yaml = serde_yaml::to_string(&config)?;
-        let mut file = std::fs::File::create(path)?;
 
-        file.write_all(yaml.as_bytes())?;
+        if !dry_run {
+            let mut file = std::fs::File::create(path)?;
+            file.write_all(yaml.as_bytes())?;
+        }
 
         Ok(())
     }
@@ -245,6 +257,7 @@ impl Blueprint {
         scripts: Vec<&UpgradeSpec>,
         output_dir: &Path,
         values: &Values,
+        dry_run: bool,
     ) -> Result<(), DynError> {
         let target_version = self.metadata.version;
         debug!(
@@ -258,7 +271,9 @@ impl Blueprint {
                 if let Some(mut s) = self.find_script(&script.script).unwrap() {
                     s.executable = Some(String::from(&script.executable));
                     println!("Running upgrade script: {}", s.name);
-                    s.run(output_dir, values)?;
+                    if !dry_run {
+                        s.run(output_dir, values)?;
+                    }
                 }
             }
         }

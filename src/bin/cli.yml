@@ -68,23 +68,13 @@ subcommands:
             takes_value: true
 
   - check:
-      about: Checks whether a generated project can still be safely updated
+      about: Checks whether a generated project can still be safely upgraded
       args:
       - project:
           short: p
           long: project
           help: The path to the project
           takes_value: true
-
-  - update:
-      about: Updates a generated project to a new blueprint version
-      args:
-      - blueprint:
-          short: b
-          long: blueprint
-          help: The blueprint to update to
-          takes_value: true
-          required: true
 
   - upgrade:
       about: Upgrade an existing project to latest blueprint version
@@ -103,3 +93,9 @@ subcommands:
           long: dry-run
           help: Upgrade dry-run, no modifications made
           takes_value: false
+      - value:
+          short: v
+          long: value
+          help: Value(s) to render the blueprint with
+          takes_value: true
+          multiple: true

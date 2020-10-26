@@ -3,7 +3,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
-use log::{debug, error};
+use log::{debug, error, info};
 use text_io::read;
 use thiserror::Error;
 
@@ -95,7 +95,7 @@ impl<'p> Project<'p> {
         Ok(())
     }
 
-    pub fn upgrade_blueprint_with_templates(&self) -> Result<(), UpgradeError> {
+    pub fn upgrade_blueprint_with_templates(&self, dry_run: bool) -> Result<(), UpgradeError> {
         let blueprint = self.blueprint()?;
         let values = self.values();
 
@@ -127,6 +127,12 @@ impl<'p> Project<'p> {
             }
 
             let new_content = template.upgrade_to(&new_template, &values, &generated_contents);
+
+            info!("Rendering template {} with content:\n{}", rel_path.display(), new_content);
+            if dry_run {
+                continue;
+            }
+
             std::fs::write(&generated_file_path, new_content)
                 .map_err(|e| UpgradeError::ProjectFileUpgradeError(e))?;
         }
@@ -141,23 +147,23 @@ impl<'p> Project<'p> {
         let config = &self.config();
         let blueprint = &self.blueprint()?;
 
-        println!("{}", blueprint);
+        info!("{}", blueprint);
 
-        // Check if blueprint version can be updated
+        // Check if blueprint version can be upgraded
         if blueprint.metadata.version == config.version {
-            println!(
+            info!(
                 "Project is already on the latest blueprint version (v{})",
                 config.version
             );
             return Ok(());
         } else if blueprint.metadata.version < config.version {
-            println!("Project is on a newer version of the blueprint. Something might be wrong.");
-            println!("  Project version:   {}", config.version);
-            println!("  Blueprint version: {}", blueprint.metadata.version);
+            info!("Project is on a newer version of the blueprint. Something might be wrong.");
+            info!("  Project version:   {}", config.version);
+            info!("  Blueprint version: {}", blueprint.metadata.version);
             panic!("Canceling upgrade");
         }
 
-        println!(
+        info!(
             "Upgrading project from blueprint version {}",
             blueprint.metadata.version
         );
@@ -199,7 +205,7 @@ impl<'p> Project<'p> {
 
         // Render new templates
         let mustache = Mustache::new();
-        blueprint.render_upgrade(&mustache, &values.into(), &self.path, &config.source)?;
+        blueprint.render_upgrade(&mustache, &values.into(), &self.path, &config.source, dry_run)?;
 
         Ok(())
     }

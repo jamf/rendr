@@ -1,7 +1,6 @@
 mod check;
 mod info;
 mod init;
-mod update;
 mod upgrade;
 
 use std::env;
@@ -66,11 +65,10 @@ fn run_app() -> Result<(), DynError> {
     let matches = App::from_yaml(yaml).version(crate_version!()).get_matches();
 
     match matches.subcommand() {
-        ("init", Some(args)) => init::init(args)?,
         ("check", Some(args)) => check::check(args)?,
-        ("update", Some(args)) => update::update(args)?,
-        ("upgrade", Some(args)) => upgrade::upgrade(args)?,
         ("info", Some(args)) => info::info(args)?,
+        ("init", Some(args)) => init::init(args)?,
+        ("upgrade", Some(args)) => upgrade::upgrade(args)?,
         _ => panic!("unknown subcommand"),
     }
 
