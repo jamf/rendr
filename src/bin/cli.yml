@@ -79,11 +79,6 @@ subcommands:
   - update:
       about: Updates a generated project to a new blueprint version
       args:
-      - project:
-          short: p
-          long: project
-          help: The path to the project
-          takes_value: true
       - blueprint:
           short: b
           long: blueprint

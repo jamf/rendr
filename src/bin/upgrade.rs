@@ -1,21 +1,23 @@
 use std::env;
-use std::error::Error;
 use std::path::Path;
 
+use anyhow::{anyhow, Error};
 use clap::ArgMatches;
+use log::error;
+use thiserror;
 
 use rendr::blueprint::Values;
 use rendr::project::Project;
 
-type DynError = Box<dyn Error>;
+#[derive(thiserror::Error, Debug)]
+pub enum UpgradeError {
+    #[error("error upgrading blueprint")]
+    BlueprintUpgradeError(#[source] std::io::Error),
+}
 
+pub fn upgrade(args: &ArgMatches) -> Result<(), Error> {
 
-pub fn upgrade(args: &ArgMatches) -> Result<(), DynError> {
-
-    let working_dir = match env::current_dir() {
-        Ok(dir) => dir,
-        Err(e) => return Err(Box::new(e)),
-    };
+    let working_dir = env::current_dir().map_err(|e| anyhow!("error determining working directory: {}", e))?;
 
     // TODO this variable is not yet used, the upgrade target must always be the latest
     let _blueprint_version = args.value_of("blueprint-version").unwrap_or("latest");
@@ -26,7 +28,5 @@ pub fn upgrade(args: &ArgMatches) -> Result<(), DynError> {
 
     let project = Project::new(&dir)?;
 
-    project.upgrade_blueprint_with_scripts(values, dry_run)?;
-
-    Ok(())
+    project.upgrade_blueprint_with_scripts(values, dry_run).map_err(|e| anyhow!("error upgrading blueprint: {}", e))
 }
