@@ -79,6 +79,12 @@ subcommands:
   - upgrade:
       about: Upgrade an existing project to latest blueprint version
       args:
+      - blueprint:
+          short: b
+          long: blueprint
+          required: true
+          help: The location of the blueprint (a git repo or a local directory)
+          takes_value: true
       - blueprint-version:
           short: v
           long: blueprint-version
@@ -93,6 +99,21 @@ subcommands:
           long: dry-run
           help: Upgrade dry-run, no modifications made
           takes_value: false
+      - user:
+          short: u
+          long: user
+          help: The user for git authentication
+          takes_value: true
+      - pass:
+          short: p
+          long: pass
+          help: The password for git authentication (it's recommended to use the GIT_PASS env var instead)
+          takes_value: true
+      - ssh-key:
+          short: k
+          long: ssh-key
+          help: The path to the private SSH key for git auth
+          takes_value: true
       - value:
           short: v
           long: value

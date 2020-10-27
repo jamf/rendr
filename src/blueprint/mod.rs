@@ -1,4 +1,4 @@
-mod source;
+pub mod source;
 mod values;
 
 use std::clone::Clone;
@@ -56,6 +56,12 @@ impl Blueprint {
 
     pub fn path(&self) -> &Path {
         self.source.path()
+    }
+
+    pub fn set_source(&mut self, source: &str, callbacks: Option<RemoteCallbacks>) -> Result<(), BlueprintInitError> {
+        self.source = Source::new(source, callbacks)?;
+
+        Ok(())
     }
 
     fn find_scripts(&mut self) -> Result<(), BlueprintInitError> {
@@ -507,6 +513,8 @@ pub struct BlueprintMetadata {
     pub version: u32,
     pub author: String,
     pub description: String,
+    #[serde(default)]
+    pub editable_templates: bool,
     values: Vec<ValueSpec>,
     #[serde(default)]
     exclusions: Vec<Pattern>,

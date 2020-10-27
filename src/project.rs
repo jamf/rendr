@@ -3,6 +3,8 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
+use anyhow::anyhow;
+use git2::RemoteCallbacks;
 use log::{debug, error, info};
 use text_io::read;
 use thiserror::Error;
@@ -10,8 +12,6 @@ use thiserror::Error;
 use crate::blueprint::{Blueprint, BlueprintInitError, RendrConfig, Values, ValueSpec};
 use crate::templating::Mustache;
 use crate::templating::tmplpp::{self, Template};
-
-type DynError = Box<dyn std::error::Error>;
 
 pub struct Project<'p> {
     path: &'p Path,
@@ -90,9 +90,20 @@ impl<'p> Project<'p> {
         Ok(())
     }
 
-    pub fn upgrade() -> Result<(), UpgradeError> {
+    pub fn upgrade(&self, blueprint_source: &str, values: Values, callbacks: Option<RemoteCallbacks>, dry_run: bool) -> Result<(), UpgradeError> {
+        let blueprint = &mut self.blueprint()?;
 
-        Ok(())
+        // Use custom blueprint source if provided on command line
+        if blueprint_source != "original" {
+            blueprint.set_source(blueprint_source, callbacks)
+                .map_err(|e| UpgradeError::BlueprintInitError(e))?;
+        }
+
+        if blueprint.metadata.editable_templates {
+            self.upgrade_blueprint_with_templates(dry_run)
+        } else {
+            self.upgrade_blueprint_with_scripts(values, dry_run)
+        }
     }
 
     pub fn upgrade_blueprint_with_templates(&self, dry_run: bool) -> Result<(), UpgradeError> {
@@ -140,7 +151,7 @@ impl<'p> Project<'p> {
         Ok(())
     }
 
-    pub fn upgrade_blueprint_with_scripts(&self, cli_values: Values, dry_run: bool) -> Result<(), DynError> {
+    pub fn upgrade_blueprint_with_scripts(&self, cli_values: Values, dry_run: bool) -> Result<(), UpgradeError> {
         debug!("Upgrade dry run mode: {}", dry_run);
 
 
@@ -205,7 +216,8 @@ impl<'p> Project<'p> {
 
         // Render new templates
         let mustache = Mustache::new();
-        blueprint.render_upgrade(&mustache, &values.into(), &self.path, &config.source, dry_run)?;
+        blueprint.render_upgrade(&mustache, &values.into(), &self.path, &config.source, dry_run)
+            .map_err(|e| UpgradeError::RenderError(anyhow!("error rendering upgrade: {}", e)))?;
 
         Ok(())
     }
@@ -284,4 +296,7 @@ pub enum UpgradeError {
 
     #[error("the generated file {0} doesn't match the blueprint")]
     MatchError(PathBuf),
+
+    #[error("error rendering upgrade")]
+    RenderError(#[from] anyhow::Error),
 }

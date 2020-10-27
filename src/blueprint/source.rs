@@ -1,10 +1,14 @@
+use std::error::Error;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
-use git2::RemoteCallbacks;
+use git2::{Cred, RemoteCallbacks};
+use log::{debug, error};
 use tempdir::TempDir;
+use text_io::read;
 use thiserror::Error;
 
-// type DynError = Box<dyn Error>;
+type DynError = Box<dyn Error>;
 
 pub enum Source {
     Local(PathBuf),
@@ -83,6 +87,84 @@ impl Source {
                 .unwrap(),
             Remote(src) => src.url().to_string(),
         }
+    }
+
+    pub fn prepare_callbacks<'c>(
+        provided_user: Option<&'c str>,
+        provided_pass: Option<&'c str>,
+        provided_ssh_key: Option<&'c Path>,
+    ) -> RemoteCallbacks<'c> {
+        let mut callbacks = RemoteCallbacks::new();
+        let mut auth_retries = 3;
+
+        callbacks.credentials(move |_url, username_from_url, allowed_types| {
+            debug!("Git requested cred types: {:?}", allowed_types);
+
+            if auth_retries < 1 {
+                panic!("exceeded 3 auth retries; invalid credentials?");
+            }
+
+            if allowed_types.is_ssh_key() {
+                auth_retries -= 1;
+
+                if let Some(path) = provided_ssh_key {
+                    return Cred::ssh_key(
+                        &get_username(provided_user, username_from_url).unwrap(),
+                        None,
+                        path,
+                        None,
+                    );
+                } else {
+                    return Cred::ssh_key(
+                        &get_username(provided_user, username_from_url).unwrap(),
+                        None,
+                        &Path::new(&format!("{}/.ssh/id_rsa", std::env::var("HOME").unwrap())),
+                        None,
+                    );
+                }
+            } else if allowed_types.is_username() {
+                return Cred::username(&get_username(provided_user, username_from_url).unwrap());
+            } else if allowed_types.is_user_pass_plaintext() {
+                auth_retries -= 1;
+
+                return Cred::userpass_plaintext(
+                    &get_username(provided_user, username_from_url).unwrap(),
+                    &get_password(provided_pass).unwrap(),
+                );
+            }
+
+            panic!(
+                "git requested an unimplemented credential type: {:?}",
+                allowed_types
+            )
+        });
+
+        fn get_username(
+            provided_user: Option<&str>,
+            username_from_url: Option<&str>,
+        ) -> Result<String, DynError> {
+            if let Some(username) = provided_user {
+                return Ok(username.to_string());
+            }
+
+            if let Some(username) = username_from_url {
+                return Ok(username.to_string());
+            }
+
+            print!("Username: ");
+            io::stdout().flush().unwrap();
+            Ok(read!("{}\n"))
+        }
+
+        fn get_password(provided_pass: Option<&str>) -> Result<String, DynError> {
+            if let Some(pass) = provided_pass {
+                return Ok(pass.to_string());
+            }
+
+            Ok(rpassword::read_password_from_tty(Some("Password: "))?)
+        }
+
+        callbacks
     }
 }
 
