@@ -85,11 +85,6 @@ subcommands:
           required: true
           help: The location of the blueprint (a git repo or a local directory)
           takes_value: true
-      - blueprint-version:
-          short: v
-          long: blueprint-version
-          help: The version of the blueprint to upgrade (defaults to latest)
-          takes_value: true
       - dir:
           short: d
           long: dir
