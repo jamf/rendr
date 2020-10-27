@@ -37,11 +37,16 @@ impl Blueprint {
         source: &str,
         callbacks: Option<RemoteCallbacks>,
     ) -> Result<Blueprint, BlueprintInitError> {
+        debug!("Initializing blueprint from source {}", source);
         let source = Source::new(source, callbacks)?;
+        let metadata_path = source.path().join("metadata.yaml");
 
-        let meta_raw = fs::read_to_string(source.path().join("metadata.yaml"))?;
+        debug!("Loading blueprint metadata from {}", metadata_path.display());
+        let meta_raw = fs::read_to_string(metadata_path)?;
 
+        debug!("Loaded blueprint metadata: {}", meta_raw);
         let metadata = serde_yaml::from_str(&meta_raw)?;
+
 
         let mut blueprint = Blueprint {
             metadata,

@@ -82,7 +82,6 @@ subcommands:
       - blueprint:
           short: b
           long: blueprint
-          required: true
           help: The location of the blueprint (a git repo or a local directory)
           takes_value: true
       - dir:

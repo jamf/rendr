@@ -21,11 +21,14 @@ impl Source {
         callbacks: Option<RemoteCallbacks>,
     ) -> Result<Self, BlueprintSourceError> {
         let path = Path::new(source);
+        debug!("Initializing blueprint source from {}", path.display());
 
         if path.exists() {
+            debug!("Source path exists, loading");
             return Ok(Self::local(path)?);
         }
 
+        debug!("Source path does not exist, loading from remote source");
         Self::remote(source, callbacks)
     }
 

@@ -50,18 +50,11 @@ impl<'p> Project<'p> {
 
     pub fn blueprint(&self) -> Result<Blueprint, BlueprintInitError> {
         let relative_source = &self.path.join(&self.meta.source);
-        let source = match relative_source.exists() {
-            true => relative_source.to_str().unwrap(),
-            false => &self.meta.source.as_str(),
-        };
-        Blueprint::new(
-            self.path
-                .join(source)
-                .as_os_str()
-                .to_str()
-                .unwrap(),
-            None,
-        )
+        debug!("Locating blueprint source, checking if relative source exists: {}", relative_source.display());
+        match relative_source.exists() {
+            true => Blueprint::new(relative_source.as_os_str().to_str().unwrap(), None),
+            false => Blueprint::new(&self.meta.source.as_str(), None),
+        }
     }
 
     pub fn validate(&self) -> Result<(), ValidationError> {
