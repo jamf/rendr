@@ -583,7 +583,7 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&engine, &test_values(), output_dir.path())
+            .render(&engine, &test_values(), output_dir.path(), false)
             .unwrap();
 
         let test = fs::read_to_string(output_dir.path().join("test.yaml")).unwrap();
@@ -604,7 +604,7 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&engine, &test_values(), output_dir.path())
+            .render(&engine, &test_values(), output_dir.path(), false)
             .unwrap();
 
         let test = fs::read_to_string(output_dir.path().join("dir/test.yaml")).unwrap();
@@ -622,7 +622,7 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&engine, &test_values(), output_dir.path())
+            .render(&engine, &test_values(), output_dir.path(), false)
             .unwrap();
 
         let excluded_file = fs::read_to_string(output_dir.path().join("excluded_file")).unwrap();
@@ -639,7 +639,7 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&engine, &test_values(), output_dir.path())
+            .render(&engine, &test_values(), output_dir.path(), false)
             .unwrap();
 
         let excluded_file1 =
@@ -682,7 +682,7 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&engine, &test_values(), output_dir.path())
+            .render(&engine, &test_values(), output_dir.path(), false)
             .unwrap();
 
         let script_output = fs::read_to_string(output_dir.path().join("script_output.md")).unwrap();
