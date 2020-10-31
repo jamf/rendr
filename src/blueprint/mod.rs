@@ -11,7 +11,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-use git2::RemoteCallbacks;
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use serde_yaml;
@@ -26,7 +25,21 @@ pub use values::Values;
 
 type DynError = Box<dyn Error>;
 
+#[derive(Clone)]
+pub struct BlueprintAuth {
+    user: Option<String>,
+    password: Option<String>,
+    ssh_key: Option<String>,
+}
+
+impl BlueprintAuth {
+    pub fn new(user: Option<String>, password: Option<String>, ssh_key: Option<String>) -> Self {
+        BlueprintAuth { user, password, ssh_key }
+    }
+}
+
 pub struct Blueprint {
+    pub auth: Option<BlueprintAuth>,
     pub metadata: BlueprintMetadata,
     pub source: Source,
     pub post_script: Option<Script>,
@@ -35,10 +48,11 @@ pub struct Blueprint {
 impl Blueprint {
     pub fn new(
         source: &str,
-        callbacks: Option<RemoteCallbacks>,
+        auth: Option<BlueprintAuth>,
     ) -> Result<Blueprint, BlueprintInitError> {
         debug!("Initializing blueprint from source {}", source);
-        let source = Source::new(source, callbacks)?;
+
+        let source = Source::new(source, auth.clone())?;
         let metadata_path = source.path().join("metadata.yaml");
 
         debug!("Loading blueprint metadata from {}", metadata_path.display());
@@ -47,8 +61,8 @@ impl Blueprint {
         debug!("Loaded blueprint metadata: {}", meta_raw);
         let metadata = serde_yaml::from_str(&meta_raw)?;
 
-
         let mut blueprint = Blueprint {
+            auth,
             metadata,
             source,
             post_script: None,
@@ -63,8 +77,8 @@ impl Blueprint {
         self.source.path()
     }
 
-    pub fn set_source(&mut self, source: &str, callbacks: Option<RemoteCallbacks>) -> Result<(), BlueprintInitError> {
-        self.source = Source::new(source, callbacks)?;
+    pub fn set_source(&mut self, source: &str) -> Result<(), BlueprintInitError> {
+        self.source = Source::new(source, self.auth.clone())?;
 
         Ok(())
     }

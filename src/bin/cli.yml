@@ -56,9 +56,9 @@ subcommands:
             long: user
             help: The user for git authentication
             takes_value: true
-        - pass:
+        - password:
             short: p
-            long: pass
+            long: password
             help: The password for git authentication (it's recommended to use the GIT_PASS env var instead)
             takes_value: true
         - ssh-key:
@@ -70,10 +70,10 @@ subcommands:
   - check:
       about: Checks whether a generated project can still be safely upgraded
       args:
-      - project:
-          short: p
-          long: project
-          help: The path to the project
+      - dir:
+          short: d
+          long: dir
+          help: The project directory path
           takes_value: true
 
   - upgrade:
@@ -98,9 +98,9 @@ subcommands:
           long: user
           help: The user for git authentication
           takes_value: true
-      - pass:
+      - password:
           short: p
-          long: pass
+          long: password
           help: The password for git authentication (it's recommended to use the GIT_PASS env var instead)
           takes_value: true
       - ssh-key:

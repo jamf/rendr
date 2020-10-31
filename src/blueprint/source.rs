@@ -8,6 +8,8 @@ use tempdir::TempDir;
 use text_io::read;
 use thiserror::Error;
 
+use super::BlueprintAuth;
+
 type DynError = Box<dyn Error>;
 
 pub enum Source {
@@ -18,7 +20,7 @@ pub enum Source {
 impl Source {
     pub fn new(
         source: &str,
-        callbacks: Option<RemoteCallbacks>,
+        auth: Option<BlueprintAuth>,
     ) -> Result<Self, BlueprintSourceError> {
         let path = Path::new(source);
         debug!("Initializing blueprint source from {}", path.display());
@@ -29,7 +31,8 @@ impl Source {
         }
 
         debug!("Source path does not exist, loading from remote source");
-        Self::remote(source, callbacks)
+        let callbacks = Source::prepare_callbacks(auth);
+        Self::remote(source, Some(callbacks))
     }
 
     fn local(path: impl AsRef<Path>) -> Result<Self, BlueprintSourceError> {
@@ -92,11 +95,17 @@ impl Source {
         }
     }
 
-    pub fn prepare_callbacks<'c>(
-        provided_user: Option<&'c str>,
-        provided_pass: Option<&'c str>,
-        provided_ssh_key: Option<&'c Path>,
-    ) -> RemoteCallbacks<'c> {
+    pub fn prepare_callbacks<'c>(auth: Option<BlueprintAuth>) -> RemoteCallbacks<'c> {
+        if auth.is_none() {
+            return RemoteCallbacks::new();
+        }
+
+        let auth = auth.unwrap();
+
+        let provided_user = auth.user;
+        let provided_pass = auth.password;
+        let provided_ssh_key = auth.ssh_key;
+
         let mut callbacks = RemoteCallbacks::new();
         let mut auth_retries = 3;
 
@@ -110,29 +119,30 @@ impl Source {
             if allowed_types.is_ssh_key() {
                 auth_retries -= 1;
 
-                if let Some(path) = provided_ssh_key {
+                if let Some(ssh_key) = &provided_ssh_key {
+                    let path = Path::new(ssh_key.as_str());
                     return Cred::ssh_key(
-                        &get_username(provided_user, username_from_url).unwrap(),
+                        &get_username(&provided_user, username_from_url).unwrap(),
                         None,
                         path,
                         None,
                     );
                 } else {
                     return Cred::ssh_key(
-                        &get_username(provided_user, username_from_url).unwrap(),
+                        &get_username(&provided_user, username_from_url).unwrap(),
                         None,
                         &Path::new(&format!("{}/.ssh/id_rsa", std::env::var("HOME").unwrap())),
                         None,
                     );
                 }
             } else if allowed_types.is_username() {
-                return Cred::username(&get_username(provided_user, username_from_url).unwrap());
+                return Cred::username(&get_username(&provided_user, username_from_url).unwrap());
             } else if allowed_types.is_user_pass_plaintext() {
                 auth_retries -= 1;
 
                 return Cred::userpass_plaintext(
-                    &get_username(provided_user, username_from_url).unwrap(),
-                    &get_password(provided_pass).unwrap(),
+                    &get_username(&provided_user, username_from_url).unwrap(),
+                    &get_password(&provided_pass).unwrap(),
                 );
             }
 
@@ -143,7 +153,7 @@ impl Source {
         });
 
         fn get_username(
-            provided_user: Option<&str>,
+            provided_user: &Option<String>,
             username_from_url: Option<&str>,
         ) -> Result<String, DynError> {
             if let Some(username) = provided_user {
@@ -159,7 +169,7 @@ impl Source {
             Ok(read!("{}\n"))
         }
 
-        fn get_password(provided_pass: Option<&str>) -> Result<String, DynError> {
+        fn get_password(provided_pass: &Option<String>) -> Result<String, DynError> {
             if let Some(pass) = provided_pass {
                 return Ok(pass.to_string());
             }

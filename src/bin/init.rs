@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::env;
 use std::error::Error;
 use std::io::{self, Write};
 use std::path::Path;
@@ -12,8 +11,7 @@ use log::{debug, error, info};
 use notify::{watcher, RecursiveMode, Watcher};
 use text_io::read;
 
-use rendr::blueprint::source;
-use rendr::blueprint::{Blueprint, ValueSpec};
+use rendr::blueprint::{Blueprint, BlueprintAuth, ValueSpec};
 use rendr::templating;
 
 type DynError = Box<dyn Error>;
@@ -23,18 +21,12 @@ pub fn init(args: &ArgMatches) -> Result<(), DynError> {
     let name = args.value_of("name").unwrap();
     let scaffold_path = Path::new(args.value_of("dir").unwrap_or(name));
 
-    let username = args.value_of("user");
-    let env_password = env::var("GIT_PASS");
-    let password = if let Ok(env_password) = &env_password {
-        Some(env_password.as_str())
-    } else {
-        args.value_of("pass")
-    };
+    let username = args.value_of("user").map(|s| s.to_string());
+    let password = args.value_of("password").map(|s| s.to_string());
+    let ssh_key = args.value_of("ssh-key").map(|s| s.to_string());
+    let auth = BlueprintAuth::new(username, password, ssh_key);
 
-    let provided_ssh_path = args.value_of("ssh-key").map(|p| p.as_ref());
-
-    let callbacks = source::Source::prepare_callbacks(username, password, provided_ssh_path);
-    let blueprint = Blueprint::new(blueprint_path, Some(callbacks))?;
+    let blueprint = Blueprint::new(blueprint_path, Some(auth))?;
 
     // Time to parse values. Let's start by collecting the defaults.
     let mut values: HashMap<&str, &str> = blueprint.default_values().collect();

@@ -4,7 +4,6 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::anyhow;
-use git2::RemoteCallbacks;
 use log::{debug, error, info};
 use text_io::read;
 use thiserror::Error;
@@ -15,11 +14,12 @@ use crate::templating::tmplpp::{self, Template};
 
 pub struct Project<'p> {
     path: &'p Path,
-    meta: RendrConfig,
+    config: RendrConfig,
+    blueprint: Blueprint,
 }
 
 impl<'p> Project<'p> {
-    pub fn new(path: &'p impl AsRef<Path>) -> Result<Self, ProjectError> {
+    pub fn new(path: &'p impl AsRef<Path>, blueprint: Blueprint) -> Result<Self, ProjectError> {
         let path = path.as_ref();
 
         let rendr_file = path.join(Path::new(".rendr.yaml"));
@@ -30,9 +30,9 @@ impl<'p> Project<'p> {
         }
 
         let yaml = fs::read_to_string(rendr_file)?;
-        let meta = serde_yaml::from_str(&yaml)?;
+        let config = serde_yaml::from_str(&yaml)?;
 
-        Ok(Self { path, meta })
+        Ok(Self { path, config, blueprint })
     }
 
     /// Get a path to the given file within the project.
@@ -41,31 +41,31 @@ impl<'p> Project<'p> {
     }
 
     pub fn values(&self) -> &Values {
-        self.meta.values()
+        self.config.values()
     }
 
     pub fn config(&self) -> &RendrConfig {
-        &self.meta
+        &self.config
     }
 
-    pub fn blueprint(&self) -> Result<Blueprint, BlueprintInitError> {
-        let relative_source = &self.path.join(&self.meta.source);
-        debug!("Locating blueprint source, checking if relative source exists: {}", relative_source.display());
-        match relative_source.exists() {
-            true => Blueprint::new(relative_source.as_os_str().to_str().unwrap(), None),
-            false => Blueprint::new(&self.meta.source.as_str(), None),
-        }
+    pub fn blueprint(&self) -> &Blueprint {
+        &self.blueprint
+        // let relative_source = &self.path.join(&self.config.source);
+        // debug!("Locating blueprint source, checking if relative source exists: {}", relative_source.display());
+        // match relative_source.exists() {
+        //     true => Blueprint::new(relative_source.as_os_str().to_str().unwrap(), None),
+        //     false => Blueprint::new(&self.config.source.as_str(), None),
+        // }
     }
 
     pub fn validate(&self) -> Result<(), ValidationError> {
-        let blueprint = self.blueprint()?;
         let values = self.values();
 
-        for file in blueprint.files() {
+        for file in self.blueprint.files() {
             let file = file?;
             let rel_path = file.path_from_template_root();
 
-            if !blueprint.is_excluded(rel_path) && !file.path().is_dir() {
+            if !self.blueprint.is_excluded(rel_path) && !file.path().is_dir() {
                 let raw_template = std::fs::read_to_string(file.path())
                     .map_err(|e| ValidationError::TemplateReadError(e))?;
                 let template = Template::from_str(&raw_template)?;
@@ -83,16 +83,14 @@ impl<'p> Project<'p> {
         Ok(())
     }
 
-    pub fn upgrade(&self, blueprint_source: &str, values: Values, callbacks: Option<RemoteCallbacks>, dry_run: bool) -> Result<(), UpgradeError> {
-        let blueprint = &mut self.blueprint()?;
-
+    pub fn upgrade(&mut self, new_blueprint_source: Option<&str>, values: Values, dry_run: bool) -> Result<(), UpgradeError> {
         // Use custom blueprint source if provided on command line
-        if blueprint_source != "original" {
-            blueprint.set_source(blueprint_source, callbacks)
+        if let Some(blueprint_source) = new_blueprint_source {
+            self.blueprint.set_source(blueprint_source)
                 .map_err(|e| UpgradeError::BlueprintInitError(e))?;
         }
 
-        if blueprint.metadata.editable_templates {
+        if self.blueprint.metadata.editable_templates {
             self.upgrade_blueprint_with_templates(dry_run)
         } else {
             self.upgrade_blueprint_with_scripts(values, dry_run)
@@ -100,14 +98,13 @@ impl<'p> Project<'p> {
     }
 
     pub fn upgrade_blueprint_with_templates(&self, dry_run: bool) -> Result<(), UpgradeError> {
-        let blueprint = self.blueprint()?;
         let values = self.values();
 
-        for file in blueprint.files() {
+        for file in self.blueprint.files() {
             let file = file?;
             let rel_path = file.path_from_template_root();
 
-            if blueprint.is_excluded(rel_path) || file.path().is_dir() {
+            if self.blueprint.is_excluded(rel_path) || file.path().is_dir() {
                 continue;
             }
 
@@ -117,7 +114,7 @@ impl<'p> Project<'p> {
                 .map_err(|e| UpgradeError::OldTemplateParseError(e))?;
 
             let new_template =
-                std::fs::read_to_string(blueprint.path().join("template").join(rel_path))
+                std::fs::read_to_string(self.blueprint.path().join("template").join(rel_path))
                     .map_err(|e| UpgradeError::NewTemplateReadError(e))?;
             let new_template = Template::from_str(&new_template)
                 .map_err(|e| UpgradeError::NewTemplateParseError(e))?;
@@ -147,9 +144,8 @@ impl<'p> Project<'p> {
     pub fn upgrade_blueprint_with_scripts(&self, cli_values: Values, dry_run: bool) -> Result<(), UpgradeError> {
         debug!("Upgrade dry run mode: {}", dry_run);
 
-
         let config = &self.config();
-        let blueprint = &self.blueprint()?;
+        let blueprint = &self.blueprint;
 
         info!("{}", blueprint);
 
