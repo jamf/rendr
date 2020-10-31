@@ -18,10 +18,7 @@ pub enum Source {
 }
 
 impl Source {
-    pub fn new(
-        source: &str,
-        auth: Option<BlueprintAuth>,
-    ) -> Result<Self, BlueprintSourceError> {
+    pub fn new(source: &str, auth: Option<BlueprintAuth>) -> Result<Self, BlueprintSourceError> {
         let path = Path::new(source);
         debug!("Initializing blueprint source from {}", path.display());
 

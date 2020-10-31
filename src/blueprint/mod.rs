@@ -34,7 +34,11 @@ pub struct BlueprintAuth {
 
 impl BlueprintAuth {
     pub fn new(user: Option<String>, password: Option<String>, ssh_key: Option<String>) -> Self {
-        BlueprintAuth { user, password, ssh_key }
+        BlueprintAuth {
+            user,
+            password,
+            ssh_key,
+        }
     }
 }
 
@@ -46,16 +50,16 @@ pub struct Blueprint {
 }
 
 impl Blueprint {
-    pub fn new(
-        source: &str,
-        auth: Option<BlueprintAuth>,
-    ) -> Result<Blueprint, BlueprintInitError> {
+    pub fn new(source: &str, auth: Option<BlueprintAuth>) -> Result<Blueprint, BlueprintInitError> {
         debug!("Initializing blueprint from source {}", source);
 
         let source = Source::new(source, auth.clone())?;
         let metadata_path = source.path().join("metadata.yaml");
 
-        debug!("Loading blueprint metadata from {}", metadata_path.display());
+        debug!(
+            "Loading blueprint metadata from {}",
+            metadata_path.display()
+        );
         let meta_raw = fs::read_to_string(metadata_path)?;
 
         debug!("Loaded blueprint metadata: {}", meta_raw);

@@ -8,9 +8,9 @@ use log::{debug, error, info};
 use text_io::read;
 use thiserror::Error;
 
-use crate::blueprint::{Blueprint, BlueprintInitError, RendrConfig, Values, ValueSpec};
-use crate::templating::Mustache;
+use crate::blueprint::{Blueprint, BlueprintInitError, RendrConfig, ValueSpec, Values};
 use crate::templating::tmplpp::{self, Template};
+use crate::templating::Mustache;
 
 pub struct Project<'p> {
     path: &'p Path,
@@ -24,7 +24,9 @@ impl<'p> Project<'p> {
 
         let rendr_file = path.join(Path::new(".rendr.yaml"));
         if !rendr_file.exists() {
-            error!("This directory does not appear to be a Rendr project: no .rendr.yaml file found");
+            error!(
+                "This directory does not appear to be a Rendr project: no .rendr.yaml file found"
+            );
             error!("  Expected file at {}", path.display());
             panic!("Project metadata not available");
         }
@@ -32,7 +34,11 @@ impl<'p> Project<'p> {
         let yaml = fs::read_to_string(rendr_file)?;
         let config = serde_yaml::from_str(&yaml)?;
 
-        Ok(Self { path, config, blueprint })
+        Ok(Self {
+            path,
+            config,
+            blueprint,
+        })
     }
 
     /// Get a path to the given file within the project.
@@ -83,10 +89,16 @@ impl<'p> Project<'p> {
         Ok(())
     }
 
-    pub fn upgrade(&mut self, new_blueprint_source: Option<&str>, values: Values, dry_run: bool) -> Result<(), UpgradeError> {
+    pub fn upgrade(
+        &mut self,
+        new_blueprint_source: Option<&str>,
+        values: Values,
+        dry_run: bool,
+    ) -> Result<(), UpgradeError> {
         // Use custom blueprint source if provided on command line
         if let Some(blueprint_source) = new_blueprint_source {
-            self.blueprint.set_source(blueprint_source)
+            self.blueprint
+                .set_source(blueprint_source)
                 .map_err(|e| UpgradeError::BlueprintInitError(e))?;
         }
 
@@ -129,7 +141,11 @@ impl<'p> Project<'p> {
 
             let new_content = template.upgrade_to(&new_template, &values, &generated_contents);
 
-            info!("Rendering template {} with content:\n{}", rel_path.display(), new_content);
+            info!(
+                "Rendering template {} with content:\n{}",
+                rel_path.display(),
+                new_content
+            );
             if dry_run {
                 continue;
             }
@@ -141,7 +157,11 @@ impl<'p> Project<'p> {
         Ok(())
     }
 
-    pub fn upgrade_blueprint_with_scripts(&self, cli_values: Values, dry_run: bool) -> Result<(), UpgradeError> {
+    pub fn upgrade_blueprint_with_scripts(
+        &self,
+        cli_values: Values,
+        dry_run: bool,
+    ) -> Result<(), UpgradeError> {
         debug!("Upgrade dry run mode: {}", dry_run);
 
         let config = &self.config();
@@ -205,7 +225,14 @@ impl<'p> Project<'p> {
 
         // Render new templates
         let mustache = Mustache::new();
-        blueprint.render_upgrade(&mustache, &values.into(), &self.path, &config.source, dry_run)
+        blueprint
+            .render_upgrade(
+                &mustache,
+                &values.into(),
+                &self.path,
+                &config.source,
+                dry_run,
+            )
             .map_err(|e| UpgradeError::RenderError(anyhow!("error rendering upgrade: {}", e)))?;
 
         Ok(())

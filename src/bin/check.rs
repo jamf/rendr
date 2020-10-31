@@ -11,8 +11,12 @@ use rendr::project::Project;
 
 pub fn check(args: &ArgMatches) -> Result<(), Error> {
     // Parse CLI arguments.
-    let working_dir = env::current_dir().map_err(|e| anyhow!("error determining working directory: {}", e))?;
-    let dir = Path::new(args.value_of("dir").unwrap_or(working_dir.to_str().unwrap()));
+    let working_dir =
+        env::current_dir().map_err(|e| anyhow!("error determining working directory: {}", e))?;
+    let dir = Path::new(
+        args.value_of("dir")
+            .unwrap_or(working_dir.to_str().unwrap()),
+    );
 
     let username = args.value_of("user").map(|s| s.to_string());
     let password = args.value_of("password").map(|s| s.to_string());
@@ -30,7 +34,10 @@ pub fn check(args: &ArgMatches) -> Result<(), Error> {
     let config: RendrConfig = serde_yaml::from_str(&yaml)?;
 
     let relative_source = dir.join(config.source.clone());
-    debug!("Locating blueprint source, checking if relative source exists: {}", relative_source.display());
+    debug!(
+        "Locating blueprint source, checking if relative source exists: {}",
+        relative_source.display()
+    );
     // let blueprint = Blueprint::new(config.source.as_str(), Some(auth));
     let blueprint = match relative_source.exists() {
         true => Blueprint::new(relative_source.as_os_str().to_str().unwrap(), Some(auth)),

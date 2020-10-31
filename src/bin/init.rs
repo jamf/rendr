@@ -172,7 +172,6 @@ fn parse_value(s: &str) -> Result<(&str, &str), String> {
     Ok((result.0, result.1))
 }
 
-
 #[test]
 fn correct_values_are_parsed_correctly() {
     let (foo, bar) = parse_value("foo:bar").unwrap();
