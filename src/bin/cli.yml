@@ -21,19 +21,21 @@ subcommands:
       about: Initializes a project from a blueprint
       args:
         - blueprint:
+            required: true
             short: b
             long: blueprint
-            required: true
             help: The location of the blueprint (a git repo or a local directory)
             takes_value: true
-        - name:
-            required: true
-            help: The name of the project
-            takes_value: true
         - dir:
+            required: true
             short: d
             long: dir
             help: The output directory name
+            takes_value: true
+        - name:
+            short: n
+            long: name
+            help: The name of the project
             takes_value: true
         - value:
             short: v
@@ -73,17 +75,17 @@ subcommands:
             long: debug
             help: Enables debug logging
 
-  - check:
-      about: Checks whether a generated project can still be safely upgraded
-      args:
-        - dir:
-            short: d
-            long: dir
-            help: The project directory path
-            takes_value: true
-        - debug:
-            long: debug
-            help: Enables debug logging
+#   - check:
+#       about: Checks whether a generated project can still be safely upgraded
+#       args:
+#         - dir:
+#             short: d
+#             long: dir
+#             help: The project directory path
+#             takes_value: true
+#         - debug:
+#             long: debug
+#             help: Enables debug logging
 
   - upgrade:
       about: Upgrade an existing project to latest blueprint version

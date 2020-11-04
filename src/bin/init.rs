@@ -19,8 +19,7 @@ type DynError = Box<dyn Error>;
 
 pub fn init(args: &ArgMatches) -> Result<(), DynError> {
     let blueprint_path = args.value_of("blueprint").unwrap();
-    let name = args.value_of("name").unwrap();
-    let scaffold_path = Path::new(args.value_of("dir").unwrap_or(name));
+    let scaffold_path = Path::new(args.value_of("dir").unwrap_or("."));
 
     let username = args.value_of("user").map(|s| s.to_string());
     let password = args.value_of("password").map(|s| s.to_string());
@@ -113,8 +112,7 @@ fn init_scaffold(
     values: &HashMap<&str, &str>,
 ) -> Result<(), DynError> {
     // Parse CLI arguments.
-    let name = args.value_of("name").unwrap();
-    let output_dir = Path::new(args.value_of("dir").unwrap_or(name));
+    let output_dir = Path::new(args.value_of("dir").unwrap_or("."));
     let dry_run = args.is_present("dry-run");
 
     println!("{}", blueprint);
