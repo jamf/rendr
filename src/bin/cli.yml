@@ -8,11 +8,14 @@ subcommands:
   - info:
       about: Displays blueprint info for this project
       args:
-      - dir:
-          short: d
-          long: dir
-          help: The project directory path
-          takes_value: true
+        - dir:
+            short: d
+            long: dir
+            help: The project directory path
+            takes_value: true
+        - debug:
+            long: debug
+            help: Enable debug logging
 
   - init:
       about: Initializes a project from a blueprint
@@ -66,51 +69,60 @@ subcommands:
             long: ssh-key
             help: The path to the private SSH key for git auth
             takes_value: true
+        - debug:
+            long: debug
+            help: Enable debug logging
 
   - check:
       about: Checks whether a generated project can still be safely upgraded
       args:
-      - dir:
-          short: d
-          long: dir
-          help: The project directory path
-          takes_value: true
+        - dir:
+            short: d
+            long: dir
+            help: The project directory path
+            takes_value: true
+        - debug:
+            long: debug
+            help: Enable debug logging
 
   - upgrade:
       about: Upgrade an existing project to latest blueprint version
       args:
-      - blueprint:
-          short: b
-          long: blueprint
-          help: The location of the blueprint (a git repo or a local directory)
-          takes_value: true
-      - dir:
-          short: d
-          long: dir
-          help: The project directory path
-          takes_value: true
-      - dry-run:
-          long: dry-run
-          help: Upgrade dry-run, no modifications made
-          takes_value: false
-      - user:
-          short: u
-          long: user
-          help: The user for git authentication
-          takes_value: true
-      - password:
-          short: p
-          long: password
-          help: The password for git authentication (it's recommended to use the GIT_PASS env var instead)
-          takes_value: true
-      - ssh-key:
-          short: k
-          long: ssh-key
-          help: The path to the private SSH key for git auth
-          takes_value: true
-      - value:
-          short: v
-          long: value
-          help: Value(s) to render the blueprint with
-          takes_value: true
-          multiple: true
+        - blueprint:
+            short: b
+            long: blueprint
+            help: The location of the blueprint (a git repo or a local directory)
+            takes_value: true
+        - dir:
+            short: d
+            long: dir
+            help: The project directory path
+            takes_value: true
+        - dry-run:
+            long: dry-run
+            help: Upgrade dry-run, no modifications made
+            takes_value: false
+        - user:
+            short: u
+            long: user
+            help: The user for git authentication
+            takes_value: true
+        - password:
+            short: p
+            long: password
+            help: The password for git authentication (it's recommended to use the GIT_PASS env var instead)
+            takes_value: true
+        - ssh-key:
+            short: k
+            long: ssh-key
+            help: The path to the private SSH key for git auth
+            takes_value: true
+        - value:
+            short: v
+            long: value
+            help: Value(s) to render the blueprint with
+            takes_value: true
+            multiple: true
+        - debug:
+            long: debug
+            help: Enable debug logging

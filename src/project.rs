@@ -218,9 +218,9 @@ impl<'p> Project<'p> {
         let v = values.entry("version").or_insert(target_version.as_str());
         *v = target_version.as_str();
 
-        debug!("Rendering blueprint with values:");
+        info!("Rendering blueprint with values:");
         for (k, v) in values.clone() {
-            debug!("- {}: {}", k, v);
+            info!("- {}: {}", k, v);
         }
 
         // Render new templates
