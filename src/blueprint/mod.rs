@@ -165,23 +165,26 @@ impl Blueprint {
             let output_path = output_dir.join(file.path_from_template_root());
 
             if path.is_file() {
-                debug!("Found file {:?}", &path);
+                debug!("Found file {:?}", &file.path_from_template_root);
 
                 if self.is_excluded(&file.path_from_template_root) {
                     debug!(
-                        "Copying {:?} to {:?} without templating.",
-                        &path, &output_path
+                        "Copying {:?} without templating.",
+                        &file.path_from_template_root
                     );
                     fs::copy(path, output_path)?;
                 } else {
-                    debug!("Using template {:?} to render {:?}", &path, &output_path);
+                    debug!(
+                        "Using template {:?} to render {:?}",
+                        &file.path_from_template_root, &output_path
+                    );
                     let contents = fs::read_to_string(&path)?;
                     let contents = engine.render_template(&contents, values.clone())?;
                     fs::write(output_path, &contents)?;
                 }
             } else if path.is_dir() {
                 if !output_path.is_dir() {
-                    debug!("Creating directory {:?}", &output_path);
+                    debug!("Creating directory {:?}", &file.path_from_template_root);
                     fs::create_dir(&output_path)?;
                 }
             }
@@ -216,16 +219,22 @@ impl Blueprint {
             if path.is_file() {
                 if self.is_excluded(&file.path_from_template_root) {
                     debug!(
-                        "Copying {:?} to {:?} without templating.",
-                        &path, &output_path
+                        "Copying {:?} without templating.",
+                        &file.path_from_template_root
                     );
                     if !dry_run {
                         fs::copy(path, output_path)?;
                     }
                 } else if output_path.exists() {
-                    debug!("Skipping {:?}, file already exists", &path);
+                    debug!(
+                        "Skipping {:?}, file already exists",
+                        &file.path_from_template_root
+                    );
                 } else {
-                    debug!("Using template {:?} to render {:?}", &path, &output_path);
+                    debug!(
+                        "Using template {:?} to render {:?}",
+                        &file.path_from_template_root, &output_path
+                    );
                     let contents = fs::read_to_string(&path)?;
                     let contents = engine.render_template(&contents, values.clone())?;
                     if !dry_run {
@@ -234,7 +243,7 @@ impl Blueprint {
                 }
             } else if path.is_dir() {
                 if !output_path.is_dir() {
-                    debug!("Creating directory {:?}", &output_path);
+                    debug!("Creating directory {:?}", &file.path_from_template_root);
                     if !dry_run {
                         fs::create_dir(&output_path)?;
                     }
