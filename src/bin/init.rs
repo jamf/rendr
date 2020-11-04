@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::env;
 use std::error::Error;
 use std::io::{self, Write};
 use std::path::Path;
@@ -7,33 +6,27 @@ use std::sync::mpsc::channel;
 use std::time::Duration;
 
 use clap::ArgMatches;
-use git2::{Cred, IndexAddOption, Oid, RemoteCallbacks, Repository, Signature};
+use git2::{IndexAddOption, Oid, Repository, Signature};
 use log::{debug, error, info};
 use notify::{watcher, RecursiveMode, Watcher};
+use notify::DebouncedEvent;
 use text_io::read;
 
-use rendr::blueprint::{Blueprint, ValueSpec};
+use rendr::blueprint::{Blueprint, BlueprintAuth, ValueSpec};
 use rendr::templating;
 
 type DynError = Box<dyn Error>;
 
 pub fn init(args: &ArgMatches) -> Result<(), DynError> {
     let blueprint_path = args.value_of("blueprint").unwrap();
-    let name = args.value_of("name").unwrap();
-    let scaffold_path = Path::new(args.value_of("dir").unwrap_or(name));
+    let scaffold_path = Path::new(args.value_of("dir").unwrap_or("."));
 
-    let username = args.value_of("user");
-    let env_password = env::var("GIT_PASS");
-    let password = if let Ok(env_password) = &env_password {
-        Some(env_password.as_str())
-    } else {
-        args.value_of("pass")
-    };
+    let username = args.value_of("user").map(|s| s.to_string());
+    let password = args.value_of("password").map(|s| s.to_string());
+    let ssh_key = args.value_of("ssh-key").map(|s| s.to_string());
+    let auth = BlueprintAuth::new(username, password, ssh_key);
 
-    let provided_ssh_path = args.value_of("ssh-key").map(|p| p.as_ref());
-
-    let callbacks = prepare_callbacks(username, password, provided_ssh_path);
-    let blueprint = Blueprint::new(blueprint_path, Some(callbacks))?;
+    let blueprint = Blueprint::new(blueprint_path, Some(auth))?;
 
     // Time to parse values. Let's start by collecting the defaults.
     let mut values: HashMap<&str, &str> = blueprint.default_values().collect();
@@ -91,10 +84,21 @@ fn watch(
         match rx.recv() {
             Ok(event) => {
                 debug!("Watch event: {:?}", event);
-                info!("Blueprint changed! Recreating scaffold...");
-                std::fs::remove_dir_all(scaffold_path)?;
-                if let Err(e) = init_scaffold(blueprint, args, values) {
-                    error!("{}", e);
+                match event {
+                    #[allow(unused_variables)]
+                    DebouncedEvent::Create(path) |
+                    DebouncedEvent::Chmod(path)  |
+                    DebouncedEvent::Remove(path) |
+                    DebouncedEvent::Rename(path, _) |
+                    DebouncedEvent::Write(path) => {
+                        info!("");
+                        info!("Blueprint changed! Recreating scaffold...");
+                        std::fs::remove_dir_all(scaffold_path)?;
+                        if let Err(e) = init_scaffold(blueprint, args, values) {
+                            error!("{}", e);
+                        }
+                    },
+                    _ => debug!("Skipping event {:?}", event),
                 }
             }
             Err(e) => error!("watch error: {:?}", e),
@@ -108,8 +112,8 @@ fn init_scaffold(
     values: &HashMap<&str, &str>,
 ) -> Result<(), DynError> {
     // Parse CLI arguments.
-    let name = args.value_of("name").unwrap();
-    let output_dir = Path::new(args.value_of("dir").unwrap_or(name));
+    let output_dir = Path::new(args.value_of("dir").unwrap_or("."));
+    let dry_run = args.is_present("dry-run");
 
     println!("{}", blueprint);
 
@@ -120,7 +124,7 @@ fn init_scaffold(
 
     let engine = templating::Tmplpp::new();
 
-    blueprint.render(&engine, &values.into(), &output_dir)?;
+    blueprint.render(&engine, &values.into(), &output_dir, dry_run)?;
 
     if args.is_present("git-init")
         || (blueprint.is_git_init_enabled() && !args.is_present("no-git-init"))
@@ -176,84 +180,6 @@ fn parse_value(s: &str) -> Result<(&str, &str), String> {
     result.1 = &result.1[1..];
 
     Ok((result.0, result.1))
-}
-
-fn prepare_callbacks<'c>(
-    provided_user: Option<&'c str>,
-    provided_pass: Option<&'c str>,
-    provided_ssh_key: Option<&'c Path>,
-) -> RemoteCallbacks<'c> {
-    let mut callbacks = RemoteCallbacks::new();
-    let mut auth_retries = 3;
-
-    callbacks.credentials(move |_url, username_from_url, allowed_types| {
-        debug!("Git requested cred types: {:?}", allowed_types);
-
-        if auth_retries < 1 {
-            panic!("exceeded 3 auth retries; invalid credentials?");
-        }
-
-        if allowed_types.is_ssh_key() {
-            auth_retries -= 1;
-
-            if let Some(path) = provided_ssh_key {
-                return Cred::ssh_key(
-                    &get_username(provided_user, username_from_url).unwrap(),
-                    None,
-                    path,
-                    None,
-                );
-            } else {
-                return Cred::ssh_key(
-                    &get_username(provided_user, username_from_url).unwrap(),
-                    None,
-                    &Path::new(&format!("{}/.ssh/id_rsa", std::env::var("HOME").unwrap())),
-                    None,
-                );
-            }
-        } else if allowed_types.is_username() {
-            return Cred::username(&get_username(provided_user, username_from_url).unwrap());
-        } else if allowed_types.is_user_pass_plaintext() {
-            auth_retries -= 1;
-
-            return Cred::userpass_plaintext(
-                &get_username(provided_user, username_from_url).unwrap(),
-                &get_password(provided_pass).unwrap(),
-            );
-        }
-
-        panic!(
-            "git requested an unimplemented credential type: {:?}",
-            allowed_types
-        )
-    });
-
-    fn get_username(
-        provided_user: Option<&str>,
-        username_from_url: Option<&str>,
-    ) -> Result<String, DynError> {
-        if let Some(username) = provided_user {
-            return Ok(username.to_string());
-        }
-
-        if let Some(username) = username_from_url {
-            return Ok(username.to_string());
-        }
-
-        print!("Username: ");
-        io::stdout().flush().unwrap();
-        Ok(read!("{}\n"))
-    }
-
-    fn get_password(provided_pass: Option<&str>) -> Result<String, DynError> {
-        if let Some(pass) = provided_pass {
-            return Ok(pass.to_string());
-        }
-
-        Ok(rpassword::read_password_from_tty(Some("Password: "))?)
-    }
-
-    callbacks
 }
 
 #[test]

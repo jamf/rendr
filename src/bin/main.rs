@@ -1,7 +1,6 @@
 mod check;
 mod info;
 mod init;
-mod update;
 mod upgrade;
 
 use std::env;
@@ -15,7 +14,14 @@ use log::error;
 type DynError = Box<dyn Error>;
 
 fn main() {
-    init_logger();
+    let args: Vec<String> = env::args().collect();
+    let dry_run = args.iter().any(|f| f == "--dry-run");
+    let debug = args.iter().any(|f| f == "--debug");
+    let log_level_from_args = match debug || dry_run {
+        true => "debug",
+        false => "info",
+    };
+    init_logger(log_level_from_args);
 
     if let Err(err) = run_app() {
         #[cfg(debug)]
@@ -37,7 +43,7 @@ const LOG_LEVEL_ENV_VAR: &str = "RENDR_LOG";
 ///
 /// More fine-grained options can be found here:
 /// https://docs.rs/env_logger
-fn init_logger() {
+fn init_logger(_log_level_from_args: &str) {
     #[cfg(debug)]
     env_logger::from_env(Env::default().filter_or(LOG_LEVEL_ENV_VAR, "debug"))
         .format_timestamp(None)
@@ -46,7 +52,7 @@ fn init_logger() {
     #[cfg(not(debug))]
     {
         let mut logger_builder =
-            env_logger::from_env(Env::default().filter_or(LOG_LEVEL_ENV_VAR, "info"));
+            env_logger::from_env(Env::default().filter_or(LOG_LEVEL_ENV_VAR, _log_level_from_args));
 
         // Turn off the prefix completely unless the logging level env var
         // is explicitly specified.
@@ -66,11 +72,10 @@ fn run_app() -> Result<(), DynError> {
     let matches = App::from_yaml(yaml).version(crate_version!()).get_matches();
 
     match matches.subcommand() {
-        ("init", Some(args)) => init::init(args)?,
         ("check", Some(args)) => check::check(args)?,
-        ("update", Some(args)) => update::update(args)?,
-        ("upgrade", Some(args)) => upgrade::upgrade(args)?,
         ("info", Some(args)) => info::info(args)?,
+        ("init", Some(args)) => init::init(args)?,
+        ("upgrade", Some(args)) => upgrade::upgrade(args)?,
         _ => panic!("unknown subcommand"),
     }
 

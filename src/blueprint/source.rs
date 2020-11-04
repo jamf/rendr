@@ -1,10 +1,16 @@
+use std::error::Error;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
-use git2::RemoteCallbacks;
+use git2::{Cred, RemoteCallbacks};
+use log::{debug, error};
 use tempdir::TempDir;
+use text_io::read;
 use thiserror::Error;
 
-// type DynError = Box<dyn Error>;
+use super::BlueprintAuth;
+
+type DynError = Box<dyn Error>;
 
 pub enum Source {
     Local(PathBuf),
@@ -12,17 +18,18 @@ pub enum Source {
 }
 
 impl Source {
-    pub fn new(
-        source: &str,
-        callbacks: Option<RemoteCallbacks>,
-    ) -> Result<Self, BlueprintSourceError> {
+    pub fn new(source: &str, auth: Option<BlueprintAuth>) -> Result<Self, BlueprintSourceError> {
         let path = Path::new(source);
+        debug!("Initializing blueprint source from {}", path.display());
 
         if path.exists() {
+            debug!("Source path exists, loading");
             return Ok(Self::local(path)?);
         }
 
-        Self::remote(source, callbacks)
+        debug!("Source path does not exist, loading from remote source");
+        let callbacks = Source::prepare_callbacks(auth);
+        Self::remote(source, Some(callbacks))
     }
 
     fn local(path: impl AsRef<Path>) -> Result<Self, BlueprintSourceError> {
@@ -83,6 +90,91 @@ impl Source {
                 .unwrap(),
             Remote(src) => src.url().to_string(),
         }
+    }
+
+    pub fn prepare_callbacks<'c>(auth: Option<BlueprintAuth>) -> RemoteCallbacks<'c> {
+        if auth.is_none() {
+            return RemoteCallbacks::new();
+        }
+
+        let auth = auth.unwrap();
+
+        let provided_user = auth.user;
+        let provided_pass = auth.password;
+        let provided_ssh_key = auth.ssh_key;
+
+        let mut callbacks = RemoteCallbacks::new();
+        let mut auth_retries = 3;
+
+        callbacks.credentials(move |_url, username_from_url, allowed_types| {
+            debug!("Git requested cred types: {:?}", allowed_types);
+
+            if auth_retries < 1 {
+                panic!("exceeded 3 auth retries; invalid credentials?");
+            }
+
+            if allowed_types.is_ssh_key() {
+                auth_retries -= 1;
+
+                if let Some(ssh_key) = &provided_ssh_key {
+                    let path = Path::new(ssh_key.as_str());
+                    return Cred::ssh_key(
+                        &get_username(&provided_user, username_from_url).unwrap(),
+                        None,
+                        path,
+                        None,
+                    );
+                } else {
+                    return Cred::ssh_key(
+                        &get_username(&provided_user, username_from_url).unwrap(),
+                        None,
+                        &Path::new(&format!("{}/.ssh/id_rsa", std::env::var("HOME").unwrap())),
+                        None,
+                    );
+                }
+            } else if allowed_types.is_username() {
+                return Cred::username(&get_username(&provided_user, username_from_url).unwrap());
+            } else if allowed_types.is_user_pass_plaintext() {
+                auth_retries -= 1;
+
+                return Cred::userpass_plaintext(
+                    &get_username(&provided_user, username_from_url).unwrap(),
+                    &get_password(&provided_pass).unwrap(),
+                );
+            }
+
+            panic!(
+                "git requested an unimplemented credential type: {:?}",
+                allowed_types
+            )
+        });
+
+        fn get_username(
+            provided_user: &Option<String>,
+            username_from_url: Option<&str>,
+        ) -> Result<String, DynError> {
+            if let Some(username) = provided_user {
+                return Ok(username.to_string());
+            }
+
+            if let Some(username) = username_from_url {
+                return Ok(username.to_string());
+            }
+
+            print!("Username: ");
+            io::stdout().flush().unwrap();
+            Ok(read!("{}\n"))
+        }
+
+        fn get_password(provided_pass: &Option<String>) -> Result<String, DynError> {
+            if let Some(pass) = provided_pass {
+                return Ok(pass.to_string());
+            }
+
+            Ok(rpassword::read_password_from_tty(Some("Password: "))?)
+        }
+
+        callbacks
     }
 }
 

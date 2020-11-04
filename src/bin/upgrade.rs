@@ -1,146 +1,61 @@
-use std::collections::HashMap;
 use std::env;
-use std::error::Error;
-use std::io::{self, Write};
-use std::path::Path;
+use std::fs;
+use std::path::{Path, PathBuf};
 
+use anyhow::{anyhow, Error};
 use clap::ArgMatches;
 use log::{debug, error};
-use text_io::read;
 
 use rendr::blueprint::Blueprint;
+use rendr::blueprint::BlueprintAuth;
 use rendr::blueprint::RendrConfig;
-use rendr::blueprint::ValueSpec;
-use rendr::templating;
+use rendr::blueprint::Values;
+use rendr::project::Project;
 
-type DynError = Box<dyn Error>;
-
-pub fn upgrade(args: &ArgMatches) -> Result<(), DynError> {
-    let dry_run = args.is_present("dry-run");
-    debug!("Upgrade dry run mode: {}", dry_run);
-    // TODO this variable is not yet used, the upgrade target must always be the latest
-    let _blueprint_version = args.value_of("blueprint-version").unwrap_or("latest");
-    let working_dir = match env::current_dir() {
-        Ok(dir) => dir,
-        Err(e) => return Err(Box::new(e)),
-    };
+pub fn upgrade(args: &ArgMatches) -> Result<(), Error> {
+    let working_dir: PathBuf =
+        env::current_dir().map_err(|e| anyhow!("error determining working directory: {}", e))?;
     let dir = Path::new(
         args.value_of("dir")
             .unwrap_or(working_dir.to_str().unwrap()),
     );
-
-    let config = match load_rendr_config(&dir) {
-        Ok(c) => c,
-        Err(e) => return Err(e),
+    let blueprint_source = args.value_of("blueprint");
+    let values = match args.is_present("value") {
+        true => Values::from(args.values_of("value").unwrap()),
+        false => Values::new(),
     };
+    let dry_run = args.is_present("dry-run");
 
-    // Attempt to read the provided blueprint
-    let relative_source = dir.join(&config.source);
-    let blueprint = match relative_source.exists() {
-        true => Blueprint::new(relative_source.to_str().unwrap(), None)?,
-        false => Blueprint::new(config.source.as_str(), None)?,
-    };
+    let username = args.value_of("user").map(|s| s.to_string());
+    let password = args.value_of("password").map(|s| s.to_string());
+    let ssh_key = args.value_of("ssh-key").map(|s| s.to_string());
+    let auth = BlueprintAuth::new(username, password, ssh_key);
 
-    println!("{}", blueprint);
-
-    // Check if blueprint version can be updated
-    if blueprint.metadata.version == config.version {
-        println!(
-            "Project is already on the latest blueprint version (v{})",
-            config.version
-        );
-        return Ok(());
-    } else if blueprint.metadata.version < config.version {
-        println!("Project is on a newer version of the blueprint. Something might be wrong.");
-        println!("  Project version:   {}", config.version);
-        println!("  Blueprint version: {}", blueprint.metadata.version);
-        panic!("Canceling upgrade");
-    }
-
-    println!(
-        "Upgrading project from blueprint version {}",
-        blueprint.metadata.version
-    );
-
-    // Initialize values with blueprint defaults
-    let mut values: HashMap<_, _> = blueprint.default_values().collect();
-
-    // Add values from original project generation
-    let config_values: HashMap<&str, &str> = config.values().map_str();
-    values.extend(config_values);
-
-    // If some values were provided via CLI arguments, merge those in
-    if let Some(cli_values) = args.values_of("value") {
-        let cli_values: Result<Vec<_>, _> = cli_values.map(parse_value).collect();
-        values.extend(cli_values?);
-    }
-
-    // Figure out which required values are still missing
-    let missing_values = blueprint
-        .required_values()
-        .filter(|v| values.get::<str>(&v.name).is_none());
-
-    // Prompt for the missing values and collect them
-    let prompt_values_owned: Vec<_> = prompt_for_values(missing_values).collect();
-
-    // Merge the values from prompts in
-    let prompt_values: Vec<_> = prompt_values_owned
-        .iter()
-        .map(|(k, v)| (*k, v.as_str()))
-        .collect();
-    values.extend(prompt_values);
-
-    // Update the target version, inserting if it does not exist for some reason
-    let target_version = blueprint.metadata.version.to_string();
-    let v = values.entry("version").or_insert(target_version.as_str());
-    *v = target_version.as_str();
-
-    debug!("Rendering blueprint with values:");
-    for (k, v) in values.clone() {
-        debug!("- {}: {}", k, v);
-    }
-
-    // Render new templates
-    let mustache = templating::Mustache::new();
-    blueprint.render_upgrade(&mustache, &values.into(), &dir, &config.source)?;
-
-    Ok(())
-}
-
-fn load_rendr_config(dir: &Path) -> Result<RendrConfig, DynError> {
-    let path = dir.join(Path::new(".rendr.yaml"));
-    if !path.exists() {
+    let rendr_file: PathBuf = dir.join(Path::new(".rendr.yaml"));
+    if !rendr_file.exists() {
         error!("This directory does not appear to be a Rendr project: no .rendr.yaml file found");
-        error!("  Expected file at {}", path.display());
-        panic!("Project info not available");
+        error!("  Expected file at {}", rendr_file.display());
+        panic!("Project metadata not available");
     }
 
-    match RendrConfig::load(&path) {
-        Ok(c) => Ok(c.unwrap()),
-        Err(e) => Err(e),
-    }
-}
+    let yaml = fs::read_to_string(rendr_file)?;
+    let config: RendrConfig = serde_yaml::from_str(&yaml)?;
 
-// TODO move this code to a common spot, copied from init.rs
-type ValueFromPrompt<'s> = (&'s str, String);
+    let relative_source = dir.join(config.source.clone());
 
-fn prompt_for_values<'s>(
-    values: impl Iterator<Item = &'s ValueSpec>,
-) -> impl Iterator<Item = ValueFromPrompt<'s>> {
-    values.map(prompt_for_value)
-}
+    debug!(
+        "Locating blueprint source, checking if relative source exists: {}",
+        relative_source.display()
+    );
+    // let blueprint = Blueprint::new(config.source.as_str(), Some(auth));
+    let blueprint = match relative_source.exists() {
+        true => Blueprint::new(relative_source.as_os_str().to_str().unwrap(), Some(auth)),
+        false => Blueprint::new(config.source.as_str(), Some(auth)),
+    };
 
-fn prompt_for_value(value: &ValueSpec) -> ValueFromPrompt<'_> {
-    print!("{}: ", value.description);
-    io::stdout().flush().unwrap();
-    (&value.name, read!("{}\n"))
-}
+    let mut project = Project::new(&dir, blueprint.unwrap())?;
 
-fn parse_value(s: &str) -> Result<(&str, &str), String> {
-    let pos = s.find(":").ok_or(format!("Invalid value `{}`", s))?;
-
-    let mut result = s.split_at(pos);
-    result.1 = &result.1[1..];
-
-    Ok((result.0, result.1))
+    project
+        .upgrade(blueprint_source, values, dry_run)
+        .map_err(|e| anyhow!("error upgrading blueprint: {}", e))
 }

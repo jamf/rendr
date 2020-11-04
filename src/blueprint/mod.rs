@@ -1,4 +1,4 @@
-mod source;
+pub mod source;
 mod values;
 
 use std::clone::Clone;
@@ -11,7 +11,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-use git2::RemoteCallbacks;
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use serde_yaml;
@@ -26,24 +25,48 @@ pub use values::Values;
 
 type DynError = Box<dyn Error>;
 
+#[derive(Clone)]
+pub struct BlueprintAuth {
+    user: Option<String>,
+    password: Option<String>,
+    ssh_key: Option<String>,
+}
+
+impl BlueprintAuth {
+    pub fn new(user: Option<String>, password: Option<String>, ssh_key: Option<String>) -> Self {
+        BlueprintAuth {
+            user,
+            password,
+            ssh_key,
+        }
+    }
+}
+
 pub struct Blueprint {
+    pub auth: Option<BlueprintAuth>,
     pub metadata: BlueprintMetadata,
     pub source: Source,
     pub post_script: Option<Script>,
 }
 
 impl Blueprint {
-    pub fn new(
-        source: &str,
-        callbacks: Option<RemoteCallbacks>,
-    ) -> Result<Blueprint, BlueprintInitError> {
-        let source = Source::new(source, callbacks)?;
+    pub fn new(source: &str, auth: Option<BlueprintAuth>) -> Result<Blueprint, BlueprintInitError> {
+        debug!("Initializing blueprint from source {}", source);
 
-        let meta_raw = fs::read_to_string(source.path().join("metadata.yaml"))?;
+        let source = Source::new(source, auth.clone())?;
+        let metadata_path = source.path().join("metadata.yaml");
 
+        debug!(
+            "Loading blueprint metadata from {}",
+            metadata_path.display()
+        );
+        let meta_raw = fs::read_to_string(metadata_path)?;
+
+        debug!("Loaded blueprint metadata: {}", meta_raw);
         let metadata = serde_yaml::from_str(&meta_raw)?;
 
         let mut blueprint = Blueprint {
+            auth,
             metadata,
             source,
             post_script: None,
@@ -56,6 +79,12 @@ impl Blueprint {
 
     pub fn path(&self) -> &Path {
         self.source.path()
+    }
+
+    pub fn set_source(&mut self, source: &str) -> Result<(), BlueprintInitError> {
+        self.source = Source::new(source, self.auth.clone())?;
+
+        Ok(())
     }
 
     fn find_scripts(&mut self) -> Result<(), BlueprintInitError> {
@@ -122,6 +151,7 @@ impl Blueprint {
         engine: &TE,
         values: &Values,
         output_dir: &Path,
+        dry_run: bool,
     ) -> Result<(), DynError> {
         // Create our output directory if it doesn't exist yet.
         debug!("Creating root project dir {:?}", &output_dir);
@@ -135,23 +165,26 @@ impl Blueprint {
             let output_path = output_dir.join(file.path_from_template_root());
 
             if path.is_file() {
-                debug!("Found file {:?}", &path);
+                debug!("Found file {:?}", &file.path_from_template_root);
 
                 if self.is_excluded(&file.path_from_template_root) {
                     debug!(
-                        "Copying {:?} to {:?} without templating.",
-                        &path, &output_path
+                        "Copying {:?} without templating.",
+                        &file.path_from_template_root
                     );
                     fs::copy(path, output_path)?;
                 } else {
-                    debug!("Using template {:?} to render {:?}", &path, &output_path);
+                    debug!(
+                        "Using template {:?} to render {:?}",
+                        &file.path_from_template_root, &output_path
+                    );
                     let contents = fs::read_to_string(&path)?;
                     let contents = engine.render_template(&contents, values.clone())?;
                     fs::write(output_path, &contents)?;
                 }
             } else if path.is_dir() {
                 if !output_path.is_dir() {
-                    debug!("Creating directory {:?}", &output_path);
+                    debug!("Creating directory {:?}", &file.path_from_template_root);
                     fs::create_dir(&output_path)?;
                 }
             }
@@ -162,7 +195,7 @@ impl Blueprint {
         }
 
         let source = self.source.to_string(output_dir);
-        self.generate_rendr_file(&source, &output_dir, &values)?;
+        self.generate_rendr_file(&source, &output_dir, &values, dry_run)?;
 
         Ok(())
     }
@@ -173,6 +206,7 @@ impl Blueprint {
         values: &Values,
         output_dir: &Path,
         source: &str,
+        dry_run: bool,
     ) -> Result<(), DynError> {
         info!("Upgrading to blueprint version {}", &self.metadata.version);
         debug!("Root project dir {:?}", &output_dir);
@@ -185,29 +219,41 @@ impl Blueprint {
             if path.is_file() {
                 if self.is_excluded(&file.path_from_template_root) {
                     debug!(
-                        "Copying {:?} to {:?} without templating.",
-                        &path, &output_path
+                        "Copying {:?} without templating.",
+                        &file.path_from_template_root
                     );
-                    fs::copy(path, output_path)?;
+                    if !dry_run {
+                        fs::copy(path, output_path)?;
+                    }
                 } else if output_path.exists() {
-                    debug!("Skipping {:?}, file already exists", &path);
+                    debug!(
+                        "Skipping {:?}, file already exists",
+                        &file.path_from_template_root
+                    );
                 } else {
-                    debug!("Using template {:?} to render {:?}", &path, &output_path);
+                    debug!(
+                        "Using template {:?} to render {:?}",
+                        &file.path_from_template_root, &output_path
+                    );
                     let contents = fs::read_to_string(&path)?;
                     let contents = engine.render_template(&contents, values.clone())?;
-                    fs::write(output_path, &contents)?;
+                    if !dry_run {
+                        fs::write(output_path, &contents)?;
+                    }
                 }
             } else if path.is_dir() {
                 if !output_path.is_dir() {
-                    debug!("Creating directory {:?}", &output_path);
-                    fs::create_dir(&output_path)?;
+                    debug!("Creating directory {:?}", &file.path_from_template_root);
+                    if !dry_run {
+                        fs::create_dir(&output_path)?;
+                    }
                 }
             }
         }
 
         let scripts = self.get_upgrade_scripts();
-        self.run_upgrade_scripts(scripts, output_dir, values)?;
-        self.generate_rendr_file(&source, &output_dir, &values)?;
+        self.run_upgrade_scripts(scripts, output_dir, values, dry_run)?;
+        self.generate_rendr_file(&source, &output_dir, &values, dry_run)?;
 
         Ok(())
     }
@@ -217,17 +263,21 @@ impl Blueprint {
         source: &str,
         output_dir: &Path,
         values: &Values,
+        dry_run: bool,
     ) -> Result<(), DynError> {
         debug!("Generating .rendr.yaml file:");
         debug!("  source: {}", source);
         debug!("  output_dir: {}", output_dir.display());
         debug!("  values: {:?}", values);
+
         let path = output_dir.join(Path::new(".rendr.yaml"));
         let config = RendrConfig::new(source.to_string().clone(), &self.metadata, values.clone());
         let yaml = serde_yaml::to_string(&config)?;
-        let mut file = std::fs::File::create(path)?;
 
-        file.write_all(yaml.as_bytes())?;
+        if !dry_run {
+            let mut file = std::fs::File::create(path)?;
+            file.write_all(yaml.as_bytes())?;
+        }
 
         Ok(())
     }
@@ -245,6 +295,7 @@ impl Blueprint {
         scripts: Vec<&UpgradeSpec>,
         output_dir: &Path,
         values: &Values,
+        dry_run: bool,
     ) -> Result<(), DynError> {
         let target_version = self.metadata.version;
         debug!(
@@ -258,7 +309,9 @@ impl Blueprint {
                 if let Some(mut s) = self.find_script(&script.script).unwrap() {
                     s.executable = Some(String::from(&script.executable));
                     println!("Running upgrade script: {}", s.name);
-                    s.run(output_dir, values)?;
+                    if !dry_run {
+                        s.run(output_dir, values)?;
+                    }
                 }
             }
         }
@@ -492,6 +545,8 @@ pub struct BlueprintMetadata {
     pub version: u32,
     pub author: String,
     pub description: String,
+    #[serde(default)]
+    pub editable_templates: bool,
     values: Vec<ValueSpec>,
     #[serde(default)]
     exclusions: Vec<Pattern>,
@@ -560,7 +615,7 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&engine, &test_values(), output_dir.path())
+            .render(&engine, &test_values(), output_dir.path(), false)
             .unwrap();
 
         let test = fs::read_to_string(output_dir.path().join("test.yaml")).unwrap();
@@ -581,7 +636,7 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&engine, &test_values(), output_dir.path())
+            .render(&engine, &test_values(), output_dir.path(), false)
             .unwrap();
 
         let test = fs::read_to_string(output_dir.path().join("dir/test.yaml")).unwrap();
@@ -599,7 +654,7 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&engine, &test_values(), output_dir.path())
+            .render(&engine, &test_values(), output_dir.path(), false)
             .unwrap();
 
         let excluded_file = fs::read_to_string(output_dir.path().join("excluded_file")).unwrap();
@@ -616,7 +671,7 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&engine, &test_values(), output_dir.path())
+            .render(&engine, &test_values(), output_dir.path(), false)
             .unwrap();
 
         let excluded_file1 =
@@ -659,7 +714,7 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&engine, &test_values(), output_dir.path())
+            .render(&engine, &test_values(), output_dir.path(), false)
             .unwrap();
 
         let script_output = fs::read_to_string(output_dir.path().join("script_output.md")).unwrap();
