@@ -9,6 +9,7 @@ use clap::ArgMatches;
 use git2::{IndexAddOption, Oid, Repository, Signature};
 use log::{debug, error, info};
 use notify::{watcher, RecursiveMode, Watcher};
+use notify::DebouncedEvent;
 use text_io::read;
 
 use rendr::blueprint::{Blueprint, BlueprintAuth, ValueSpec};
@@ -84,10 +85,21 @@ fn watch(
         match rx.recv() {
             Ok(event) => {
                 debug!("Watch event: {:?}", event);
-                info!("Blueprint changed! Recreating scaffold...");
-                std::fs::remove_dir_all(scaffold_path)?;
-                if let Err(e) = init_scaffold(blueprint, args, values) {
-                    error!("{}", e);
+                match event {
+                    #[allow(unused_variables)]
+                    DebouncedEvent::Create(path) |
+                    DebouncedEvent::Chmod(path)  |
+                    DebouncedEvent::Remove(path) |
+                    DebouncedEvent::Rename(path, _) |
+                    DebouncedEvent::Write(path) => {
+                        info!("");
+                        info!("Blueprint changed! Recreating scaffold...");
+                        std::fs::remove_dir_all(scaffold_path)?;
+                        if let Err(e) = init_scaffold(blueprint, args, values) {
+                            error!("{}", e);
+                        }
+                    },
+                    _ => debug!("Skipping event {:?}", event),
                 }
             }
             Err(e) => error!("watch error: {:?}", e),
