@@ -15,7 +15,7 @@ subcommands:
             takes_value: true
         - debug:
             long: debug
-            help: Enable debug logging
+            help: Enables debug logging
 
   - init:
       about: Initializes a project from a blueprint
@@ -71,7 +71,7 @@ subcommands:
             takes_value: true
         - debug:
             long: debug
-            help: Enable debug logging
+            help: Enables debug logging
 
   - check:
       about: Checks whether a generated project can still be safely upgraded
@@ -83,7 +83,7 @@ subcommands:
             takes_value: true
         - debug:
             long: debug
-            help: Enable debug logging
+            help: Enables debug logging
 
   - upgrade:
       about: Upgrade an existing project to latest blueprint version
@@ -125,4 +125,4 @@ subcommands:
             multiple: true
         - debug:
             long: debug
-            help: Enable debug logging
+            help: Enables debug logging
