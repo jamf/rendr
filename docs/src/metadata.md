@@ -32,6 +32,7 @@ Parameter     | Description
 `description` | The blueprint description
 `values`      | A list of values that will be provided to the template rendering
 `exclusions`  | A list of glob patterns to exclude from rendering
+`upgrades`    | An optional list of upgrade scripts
 
 There can be any number of items in the `values` list. The structure of each
 item looks like this:
@@ -47,3 +48,11 @@ The `required` field defaults to `false`, and can be omitted.
 
 The `default` field can also be omitted. If there is no default, the user will
 be prompted for this value (if not provided with the `-v` flag).
+
+The `upgrades` field can have any number of upgrade scripts in the list. The structure of
+each upgrade script is like this:
+
+Parameter    | Description
+`version`    | The blueprint version where this script will be run (format: integer)
+`script`     | The name of the script file in the blueprint `scripts` directory
+`executable` | The executable (program) to use to run the script
