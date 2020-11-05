@@ -26,7 +26,7 @@ subcommands:
             required: true
             takes_value: true
         - author:
-            help: The blueprint author's name and/or email
+            help: The blueprint author
             short: a
             long: author
             takes_value: true
