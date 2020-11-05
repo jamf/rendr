@@ -5,8 +5,9 @@ settings:
 - StrictUtf8
 args:
 subcommands:
+
   - info:
-      about: Displays blueprint info for this project
+      about: Displays blueprint info for a project
       args:
         - dir:
             short: d
@@ -17,8 +18,29 @@ subcommands:
             long: debug
             help: Enables debug logging
 
-  - init:
-      about: Initializes a project from a blueprint
+  - create-blueprint:
+      about: Creates a new blueprint scaffold
+      args:
+        - name:
+            help: The blueprint name
+            required: true
+            takes_value: true
+        - author:
+            help: The blueprint author's name and/or email
+            short: a
+            long: author
+            takes_value: true
+        - description:
+            help: The blueprint description
+            short: d
+            long: description
+            takes_value: true
+        - debug:
+            help: Enables debug logging
+            long: debug
+
+  - create:
+      about: Creates a project from a blueprint
       args:
         - blueprint:
             required: true
@@ -55,7 +77,7 @@ subcommands:
             long: watch
             short: w
             takes_value: false
-            help: After initializing the scaffold, watch the filesystem for changes to the blueprint and reinitalize the scaffold when they are detected
+            help: After generating the project, watch the blueprint files for changes and regenerate the project on change
         - user:
             short: u
             long: user

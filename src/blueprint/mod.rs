@@ -539,7 +539,7 @@ impl Display for Blueprint {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct BlueprintMetadata {
     pub name: String,
     pub version: u32,
@@ -547,17 +547,17 @@ pub struct BlueprintMetadata {
     pub description: String,
     #[serde(default)]
     pub editable_templates: bool,
-    values: Vec<ValueSpec>,
+    pub values: Vec<ValueSpec>,
     #[serde(default)]
-    exclusions: Vec<Pattern>,
+    pub exclusions: Vec<Pattern>,
     #[serde(alias = "git-init")]
     #[serde(default)]
-    git_init: bool,
+    pub git_init: bool,
     #[serde(default)]
-    upgrades: Vec<UpgradeSpec>,
+    pub upgrades: Vec<UpgradeSpec>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct ValueSpec {
     pub name: String,
     pub description: String,
@@ -566,7 +566,7 @@ pub struct ValueSpec {
     pub required: bool,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct UpgradeSpec {
     pub version: u32,
     pub script: String,

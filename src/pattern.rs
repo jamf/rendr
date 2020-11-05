@@ -2,6 +2,7 @@ use std::fmt;
 use std::ops::Deref;
 
 use serde::de::{self, Deserialize, Deserializer, Visitor};
+use serde::{Serialize, Serializer};
 
 /// A glob pattern for paths, meant to be directly deserialized into.
 ///
@@ -37,6 +38,12 @@ impl<'de> Visitor<'de> for PatternVisitor {
             Ok(pattern) => pattern,
             Err(e) => return Err(E::custom(format!("invalid path pattern {}: {}", value, e))),
         }))
+    }
+}
+
+impl Serialize for Pattern {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer, {
+        serializer.serialize_str(self.as_str())
     }
 }
 
