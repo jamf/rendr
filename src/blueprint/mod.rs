@@ -342,6 +342,7 @@ pub struct RendrConfig {
     pub author: String,
     pub description: String,
     pub source: String,
+    pub rendr_version: String,
     values: Values,
 }
 
@@ -350,6 +351,7 @@ impl RendrConfig {
         RendrConfig {
             name: metadata.name.clone(),
             version: metadata.version,
+            rendr_version: env!("CARGO_PKG_VERSION").to_string(),
             author: metadata.author.clone(),
             description: metadata.description.clone(),
             source,
