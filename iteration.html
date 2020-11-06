@@ -180,11 +180,11 @@
 <p>Get the helpfile.</p>
 <pre><code class="language-sh">cargo run -- -h
 </code></pre>
-<p>Get the helpfile for the <code>init</code> subcommand.</p>
-<pre><code class="language-sh">cargo run -- init -h
+<p>Get the help text for the <code>create</code> subcommand.</p>
+<pre><code class="language-sh">cargo run -- create -h
 </code></pre>
-<p>Initialize a project from the <a href="https://stash.jamf.build/projects/SCAF/repos/blueprint-go-microservice/browse">Go microservice blueprint</a>.</p>
-<pre><code class="language-sh">cargo run -- init --template https://stash.jamf.build/scm/scaf/blueprint-go-microservice.git my-project -v name:foo
+<p>Initialize a project from the <a href="https://github.com/jamf/rendr-sample-blueprint-go-microservice">Go microservice blueprint</a>.</p>
+<pre><code class="language-sh">cargo run -- create --blueprint https://github.com/jamf/rendr-sample-blueprint-go-microservice.git --dir my-project -v name:foo
 </code></pre>
 
                     </main>

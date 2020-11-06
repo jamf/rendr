@@ -201,17 +201,18 @@ FLAGS:
     -V, --version    Prints version information
 
 SUBCOMMANDS:
-    help       Prints this message or the help of the given subcommand(s)
-    info       Displays blueprint info for this project
-    init       Initializes a project from a blueprint
-    upgrade    Upgrade an existing project to latest blueprint version
+    create              Creates a project from a blueprint
+    create-blueprint    Creates a new blueprint scaffold
+    help                Prints this message or the help of the given subcommand(s)
+    info                Displays blueprint info for an existing project
 </code></pre>
 <p>To see usage for a subcommand, use <code>rendr [command] --help</code>:</p>
-<pre><code>❯ rendr init --help
-Initializes a project from a blueprint
+<pre><code>❯ rendr create --help
+rendr-create
+Creates a project from a blueprint
 
 USAGE:
-    rendr init [FLAGS] [OPTIONS] --blueprint &lt;blueprint&gt; --dir &lt;dir&gt;
+    rendr create [FLAGS] [OPTIONS] --blueprint &lt;blueprint&gt; --dir &lt;dir&gt;
 
 FLAGS:
         --debug          Enables debug logging
@@ -219,28 +220,28 @@ FLAGS:
     -h, --help           Prints help information
         --no-git-init    Skips initializing Git repository in the rendered project
     -V, --version        Prints version information
-    -w, --watch          After initializing the scaffold, watch the filesystem for changes to the blueprint and
-                         reinitalize the scaffold when they are detected
+    -w, --watch          After generating the project, watch the blueprint files for changes and regenerate the project
+                         on change
 
 OPTIONS:
-    -b, --blueprint &lt;blueprint&gt;    The location of the blueprint (a git repo or a local directory)
+    -b, --blueprint &lt;blueprint&gt;    The location of the blueprint (a Git repo or a local directory)
     -d, --dir &lt;dir&gt;                The output directory name
     -n, --name &lt;name&gt;              The name of the project
-    -p, --password &lt;password&gt;      The password for git authentication (it's recommended to use the GIT_PASS env var
-                                   instead)
-    -k, --ssh-key &lt;ssh-key&gt;        The path to the private SSH key for git auth
-    -u, --user &lt;user&gt;              The user for git authentication
-    -v, --value &lt;value&gt;...         Value(s) to render the blueprint with
+    -p, --password &lt;password&gt;      The password for Git authentication (insecure - use the GIT_PASS env var instead)
+    -k, --ssh-key &lt;ssh-key&gt;        The path to the private SSH key for Git auth
+    -u, --user &lt;user&gt;              The user for Git authentication
+    -v, --value &lt;value&gt;...         Custom value provided the blueprint (flag may be repeated)
 </code></pre>
 <h2><a class="header" href="#render-a-project" id="render-a-project">Render a project</a></h2>
-<p>Use <code>rendr init</code> to render a project from a blueprint. The basic usage looks like this:</p>
-<pre><code class="language-sh">rendr init --blueprint https://github.com/your/template --dir my-project
+<p>Use <code>rendr create</code> to render a project from a blueprint. The basic usage looks
+like this:</p>
+<pre><code class="language-sh">rendr create --blueprint https://github.com/your/template --dir my-project
 </code></pre>
 <h2><a class="header" href="#provide-custom-values" id="provide-custom-values">Provide custom values</a></h2>
-<p>By default, if you don't provide any values when running <code>rendr init</code>, you will
+<p>By default, if you don't provide any values when running <code>rendr create</code>, you will
 be prompted for each required value. To provide values non-interactively, use
 the <code>-v</code> flag. This flag is repeated once for each value.</p>
-<pre><code class="language-sh">rendr init -b https://github.com/your/template -d my-project -v name:foo -v version:1.0.0
+<pre><code class="language-sh">rendr create -b https://github.com/your/template -d my-project -v name:foo -v version:1.0.0
 </code></pre>
 <h2><a class="header" href="#important-a-note-about-scripts" id="important-a-note-about-scripts">Important! A note about scripts</a></h2>
 <p>Blueprints can contain scripts that execute as part of the rendering process.
@@ -262,8 +263,8 @@ and best practices across multiple codebases.</p>
 <p>If you are developing a blueprint, you will likely want to edit your templates
 and then render them to see the output, make more edits, render them again, in
 a continuous loop.  To make this easier, use the <code>--watch</code> (<code>-w</code>) flag for
-<code>rendr init</code>.</p>
-<pre><code class="language-sh">rendr init --blueprint ../my-blueprint --dir foo --watch
+<code>rendr create</code>.</p>
+<pre><code class="language-sh">rendr create --blueprint ../my-blueprint --dir foo --watch
 Output directory: &quot;foo&quot;. Creating your new scaffold...
 Success. Enjoy!
 Watching for blueprint changes...
@@ -334,7 +335,7 @@ values:
   default: &quot;8000&quot;
 </code></pre>
 <p>These values are then provided by the user rendering the blueprint like this:</p>
-<pre><code>rendr init foo --blueprint &lt;url&gt; --value name:foo --value port:3000
+<pre><code>rendr create --dir foo --blueprint &lt;url&gt; --value name:foo --value port:3000
 </code></pre>
 <p>This will result in all the files in the <code>template</code> directory being rendered by
 the template engine and copied into the specified new project directory (in
@@ -481,11 +482,11 @@ the same.</p>
 <p>Get the helpfile.</p>
 <pre><code class="language-sh">cargo run -- -h
 </code></pre>
-<p>Get the helpfile for the <code>init</code> subcommand.</p>
-<pre><code class="language-sh">cargo run -- init -h
+<p>Get the help text for the <code>create</code> subcommand.</p>
+<pre><code class="language-sh">cargo run -- create -h
 </code></pre>
-<p>Initialize a project from the <a href="https://stash.jamf.build/projects/SCAF/repos/blueprint-go-microservice/browse">Go microservice blueprint</a>.</p>
-<pre><code class="language-sh">cargo run -- init --template https://stash.jamf.build/scm/scaf/blueprint-go-microservice.git my-project -v name:foo
+<p>Initialize a project from the <a href="https://github.com/jamf/rendr-sample-blueprint-go-microservice">Go microservice blueprint</a>.</p>
+<pre><code class="language-sh">cargo run -- create --blueprint https://github.com/jamf/rendr-sample-blueprint-go-microservice.git --dir my-project -v name:foo
 </code></pre>
 
                     </main>

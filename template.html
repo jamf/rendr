@@ -208,7 +208,7 @@ values:
   default: &quot;8000&quot;
 </code></pre>
 <p>These values are then provided by the user rendering the blueprint like this:</p>
-<pre><code>rendr init foo --blueprint &lt;url&gt; --value name:foo --value port:3000
+<pre><code>rendr create --dir foo --blueprint &lt;url&gt; --value name:foo --value port:3000
 </code></pre>
 <p>This will result in all the files in the <code>template</code> directory being rendered by
 the template engine and copied into the specified new project directory (in
