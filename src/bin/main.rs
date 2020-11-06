@@ -1,4 +1,5 @@
 mod check;
+mod create_blueprint;
 mod info;
 mod init;
 mod upgrade;
@@ -72,9 +73,10 @@ fn run_app() -> Result<(), DynError> {
     let matches = App::from_yaml(yaml).version(crate_version!()).get_matches();
 
     match matches.subcommand() {
+        ("create", Some(args)) => init::init(args)?,
+        ("create-blueprint", Some(args)) => create_blueprint::create(args)?,
         ("check", Some(args)) => check::check(args)?,
         ("info", Some(args)) => info::info(args)?,
-        ("init", Some(args)) => init::init(args)?,
         ("upgrade", Some(args)) => upgrade::upgrade(args)?,
         _ => panic!("unknown subcommand"),
     }
