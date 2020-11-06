@@ -366,12 +366,12 @@ templating engine directly. The way to accomplish this is to rename the files
 or directories in the <code>post-render.sh</code> script. See <a href="scripts.html">Scripts</a> for
 more details.</p>
 <h2><a class="header" href="#additional-use-cases" id="additional-use-cases">Additional use cases</a></h2>
-<p>Between the Mustache templating and customization via post-render scripts,
-<code>rendr</code> provides immense flexibility to generate projects for nearly any tech
-stack. If you have specific use cases that you find are not supported, please
-open a issue over at the <a href="https://github.com/jamf/rendr/issues">GitHub Issues</a>,
-describe your problem and what functionality is missing, and we will consider
-it.</p>
+<p>Between the Mustache templating and customization via pre- and post-render
+scripts, <code>rendr</code> provides immense flexibility to generate projects for nearly
+any tech stack. If you have specific use cases that you find are not supported,
+please open a issue over at the <a href="https://github.com/jamf/rendr/issues">GitHub
+Issues</a>, describe your problem and what
+functionality is missing, and we will consider it.</p>
 <h2><a class="header" href="#support" id="support">Support</a></h2>
 <p>Still need help or more examples? Open an issue at <code>rendr</code>'s <a href="https://github.com/jamf/rendr/issues">GitHub
 Issues</a> and describe your problem, and
@@ -426,14 +426,16 @@ each upgrade script is like this:</p>
 <p>Blueprints can optionally contain scripts. This is a powerful mechanism that enables
 blueprint creators to customize how the blueprint is rendered.</p>
 <p>Scripts live in the <code>scripts</code> directory at the root level of the blueprint.</p>
-<p>Currently only the <code>post-render.sh</code> script is supported. This can be expanded
-in the future if there are other integration points where scripts are useful.</p>
-<h2><a class="header" href="#the-post-render-script" id="the-post-render-script">The post-render script</a></h2>
-<p>If there is a script named <code>post-render.sh</code> in the blueprint's <code>scripts</code> directory, it will be
-run automatically after the template files are rendered by the templating engine.</p>
+<p>Currently only <code>pre-render.sh</code> and <code>post-render.sh</code> scripts are supported. This
+can be expanded in the future if there are other integration points where
+scripts are useful.</p>
+<h2><a class="header" href="#the-pre-render-script" id="the-pre-render-script">The pre-render script</a></h2>
+<p>If a script named <code>pre-render.sh</code> exists in the blueprint's <code>scripts</code>
+directory, it will be run immediately after the generated project directory is
+created, and before any template files are rendered.</p>
 <p>The values used to render the template are also provided to the script as
-environment variables. So, if a user specifies <code>-v foo:42</code>, there will be a
-variable named <code>foo</code> that can be accessed in the script like this:</p>
+environment variables. So, if a user specifies <code>--value foo:42</code>, there will be
+a variable named <code>foo</code> that can be accessed in the script like this:</p>
 <pre><code class="language-sh">#!/bin/sh
 
 echo &quot;The value of foo is $foo!&quot;
@@ -441,11 +443,17 @@ echo &quot;The value of foo is $foo!&quot;
 <p>This script will print:</p>
 <pre><code>The value of foo is 42!
 </code></pre>
+<p><strong>NOTE:</strong> The script must be executable to be run. Make it executable like this:</p>
+<pre><code>chmod +x scripts/pre-render.sh
+</code></pre>
+<h2><a class="header" href="#the-post-render-script" id="the-post-render-script">The post-render script</a></h2>
+<p>If there is a script named <code>post-render.sh</code> in the blueprint's <code>scripts</code> directory, it will be
+run automatically after the template files are rendered by the templating engine.</p>
 <p>Use the post-render script to customize files and directories, or to create
 remote repositories, CI/CD pipelines, etc.</p>
-<p><strong>NOTE:</strong> The script must be executable to be run. Make it executable like this:</p>
-<pre><code>chmod +x scripts/post-render.sh
-</code></pre>
+<p>For more details, see the notes above on the <code>pre-render</code> script regarding
+environment variables and executable file permissions, which apply here just
+the same.</p>
 <h1><a class="header" href="#development" id="development">Development</a></h1>
 <p>This chapter includes information pertaining to <code>rendr</code> contributors.</p>
 <h1><a class="header" href="#local-iteration" id="local-iteration">Local iteration</a></h1>
