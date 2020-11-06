@@ -15,19 +15,19 @@ View the available commands with `rendr --help`:
         -V, --version    Prints version information
 
     SUBCOMMANDS:
-        help       Prints this message or the help of the given subcommand(s)
-        info       Displays blueprint info for this project
-        init       Initializes a project from a blueprint
-        upgrade    Upgrade an existing project to latest blueprint version
-
+        create              Creates a project from a blueprint
+        create-blueprint    Creates a new blueprint scaffold
+        help                Prints this message or the help of the given subcommand(s)
+        info                Displays blueprint info for an existing project
 
 To see usage for a subcommand, use `rendr [command] --help`:
 
-    ❯ rendr init --help
-    Initializes a project from a blueprint
+    ❯ rendr create --help
+    rendr-create
+    Creates a project from a blueprint
 
     USAGE:
-        rendr init [FLAGS] [OPTIONS] --blueprint <blueprint> --dir <dir>
+        rendr create [FLAGS] [OPTIONS] --blueprint <blueprint> --dir <dir>
 
     FLAGS:
             --debug          Enables debug logging
@@ -35,35 +35,35 @@ To see usage for a subcommand, use `rendr [command] --help`:
         -h, --help           Prints help information
             --no-git-init    Skips initializing Git repository in the rendered project
         -V, --version        Prints version information
-        -w, --watch          After initializing the scaffold, watch the filesystem for changes to the blueprint and
-                             reinitalize the scaffold when they are detected
+        -w, --watch          After generating the project, watch the blueprint files for changes and regenerate the project
+                             on change
 
     OPTIONS:
-        -b, --blueprint <blueprint>    The location of the blueprint (a git repo or a local directory)
+        -b, --blueprint <blueprint>    The location of the blueprint (a Git repo or a local directory)
         -d, --dir <dir>                The output directory name
         -n, --name <name>              The name of the project
-        -p, --password <password>      The password for git authentication (it's recommended to use the GIT_PASS env var
-                                       instead)
-        -k, --ssh-key <ssh-key>        The path to the private SSH key for git auth
-        -u, --user <user>              The user for git authentication
-        -v, --value <value>...         Value(s) to render the blueprint with
+        -p, --password <password>      The password for Git authentication (insecure - use the GIT_PASS env var instead)
+        -k, --ssh-key <ssh-key>        The path to the private SSH key for Git auth
+        -u, --user <user>              The user for Git authentication
+        -v, --value <value>...         Custom value provided the blueprint (flag may be repeated)
 
 ## Render a project
 
-Use `rendr init` to render a project from a blueprint. The basic usage looks like this:
+Use `rendr create` to render a project from a blueprint. The basic usage looks
+like this:
 
 ```sh
-rendr init --blueprint https://github.com/your/template --dir my-project
+rendr create --blueprint https://github.com/your/template --dir my-project
 ```
 
 ## Provide custom values
 
-By default, if you don't provide any values when running `rendr init`, you will
+By default, if you don't provide any values when running `rendr create`, you will
 be prompted for each required value. To provide values non-interactively, use
 the `-v` flag. This flag is repeated once for each value.
 
 ```sh
-rendr init -b https://github.com/your/template -d my-project -v name:foo -v version:1.0.0
+rendr create -b https://github.com/your/template -d my-project -v name:foo -v version:1.0.0
 ```
 
 ## Important! A note about scripts
@@ -93,10 +93,10 @@ Use `rendr upgrade --help` for more details on usage.
 If you are developing a blueprint, you will likely want to edit your templates
 and then render them to see the output, make more edits, render them again, in
 a continuous loop.  To make this easier, use the `--watch` (`-w`) flag for
-`rendr init`.
+`rendr create`.
 
 ```sh
-rendr init --blueprint ../my-blueprint --dir foo --watch
+rendr create --blueprint ../my-blueprint --dir foo --watch
 Output directory: "foo". Creating your new scaffold...
 Success. Enjoy!
 Watching for blueprint changes...

@@ -42,12 +42,12 @@ Get the helpfile.
 cargo run -- -h
 ```
 
-Get the helpfile for the `init` subcommand.
+Get the help text for the `create` subcommand.
 ```sh
-cargo run -- init -h
+cargo run -- create -h
 ```
 
-Initialize a project from the [Go microservice blueprint](https://stash.jamf.build/projects/SCAF/repos/blueprint-go-microservice/browse).
+Initialize a project from the [Go microservice blueprint](https://github.com/jamf/rendr-sample-blueprint-go-microservice).
 ```sh
-cargo run -- init --template https://stash.jamf.build/scm/scaf/blueprint-go-microservice.git my-project -v name:foo
+cargo run -- create --blueprint https://github.com/jamf/rendr-sample-blueprint-go-microservice.git --dir my-project -v name:foo
 ```

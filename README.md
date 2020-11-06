@@ -62,12 +62,12 @@ View available commands:
 
 The basic usage to generate a project looks like this:
 ```sh
-rendr init --blueprint https://github.com/your/template --dir my-project
+rendr create --blueprint https://github.com/your/template --dir my-project
 ```
 
 Provide values to the template with the `-v` flag:
 ```sh
-rendr init -b https://github.com/your/template -d my-project -v name:foo -v version:1.0.0
+rendr create -b https://github.com/your/template -d my-project -v name:foo -v version:1.0.0
 ```
 
 ## Contributing
