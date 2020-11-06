@@ -116,7 +116,7 @@ As a blueprint author, your next steps are:
 
 To create a project from this blueprint, run:
 
-    rendr init --blueprint <path or url> --dir <project name>
+    rendr create --blueprint <path or url> --dir <project name>
 
 Then, run the app:
 

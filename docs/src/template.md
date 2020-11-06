@@ -68,7 +68,7 @@ values:
 
 These values are then provided by the user rendering the blueprint like this:
 
-	rendr init foo --blueprint <url> --value name:foo --value port:3000
+	rendr create --dir foo --blueprint <url> --value name:foo --value port:3000
 
 This will result in all the files in the `template` directory being rendered by
 the template engine and copied into the specified new project directory (in
