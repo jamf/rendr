@@ -108,12 +108,12 @@ more details.
 
 ## Additional use cases
 
-Between the Mustache templating and customization via post-render scripts,
-`rendr` provides immense flexibility to generate projects for nearly any tech
-stack. If you have specific use cases that you find are not supported, please
-open a issue over at the [GitHub Issues](https://github.com/jamf/rendr/issues),
-describe your problem and what functionality is missing, and we will consider
-it.
+Between the Mustache templating and customization via pre- and post-render
+scripts, `rendr` provides immense flexibility to generate projects for nearly
+any tech stack. If you have specific use cases that you find are not supported,
+please open a issue over at the [GitHub
+Issues](https://github.com/jamf/rendr/issues), describe your problem and what
+functionality is missing, and we will consider it.
 
 ## Support
 

@@ -46,7 +46,8 @@ pub struct Blueprint {
     pub auth: Option<BlueprintAuth>,
     pub metadata: BlueprintMetadata,
     pub source: Source,
-    pub post_script: Option<Script>,
+    pub pre_render_script: Option<Script>,
+    pub post_render_script: Option<Script>,
 }
 
 impl Blueprint {
@@ -69,7 +70,8 @@ impl Blueprint {
             auth,
             metadata,
             source,
-            post_script: None,
+            pre_render_script: None,
+            post_render_script: None,
         };
 
         blueprint.find_scripts()?;
@@ -88,7 +90,8 @@ impl Blueprint {
     }
 
     fn find_scripts(&mut self) -> Result<(), BlueprintInitError> {
-        self.post_script = self.find_script("post-render.sh")?;
+        self.pre_render_script = self.find_script("pre-render.sh")?;
+        self.post_render_script = self.find_script("post-render.sh")?;
 
         Ok(())
     }
@@ -153,12 +156,19 @@ impl Blueprint {
         output_dir: &Path,
         dry_run: bool,
     ) -> Result<(), DynError> {
+
         // Create our output directory if it doesn't exist yet.
         debug!("Creating root project dir {:?}", &output_dir);
         if !output_dir.is_dir() {
             fs::create_dir(output_dir)?;
         }
 
+        // Run pre-render script
+        if let Some(pre_render_script) = &self.pre_render_script {
+            pre_render_script.run(output_dir, &values)?;
+        }
+
+        // Render each file in blueprint template
         for file in self.files() {
             let file = file?;
             let path = file.path();
@@ -190,10 +200,12 @@ impl Blueprint {
             }
         }
 
-        if let Some(post_script) = &self.post_script {
-            post_script.run(output_dir, &values)?;
+        // Run post-render script
+        if let Some(post_render_script) = &self.post_render_script {
+            post_render_script.run(output_dir, &values)?;
         }
 
+        // Generate .rendr.yaml metadata file
         let source = self.source.to_string(output_dir);
         self.generate_rendr_file(&source, &output_dir, &values, dry_run)?;
 
