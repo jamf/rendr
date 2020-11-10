@@ -13,12 +13,17 @@ use rendr::blueprint::{BlueprintMetadata, ValueSpec};
 pub fn create(args: &ArgMatches) -> Result<(), Error> {
     let name = args.value_of("name").unwrap();
     let author = args.value_of("author").unwrap_or("");
-    let description = args.value_of("description").unwrap_or("A simple blueprint for Rendr");
+    let description = args
+        .value_of("description")
+        .unwrap_or("A simple blueprint for Rendr");
     let dir = Path::new(name);
 
     info!("Creating blueprint '{}'", name);
     if dir.exists() {
-        debug!("File or directory already exists at {}. Exiting.", dir.display());
+        debug!(
+            "File or directory already exists at {}. Exiting.",
+            dir.display()
+        );
         return Err(anyhow!("directory '{}' already exists", dir.display()));
     }
 
@@ -46,7 +51,7 @@ pub fn create(args: &ArgMatches) -> Result<(), Error> {
         required: false,
         default: Option::Some(String::from("42")),
     };
-    let values = vec!(value1, value2);
+    let values = vec![value1, value2];
 
     let config = BlueprintMetadata {
         name: String::from(name),
@@ -62,7 +67,11 @@ pub fn create(args: &ArgMatches) -> Result<(), Error> {
 
     let metadata = serde_yaml::to_string(&config)?;
 
-    debug!("Creating file {} with contents:\n{}", metadata_path.display(), metadata);
+    debug!(
+        "Creating file {} with contents:\n{}",
+        metadata_path.display(),
+        metadata
+    );
     let mut metadata_file = File::create(metadata_path)?;
     metadata_file.write_all(metadata.as_bytes())?;
 
@@ -74,7 +83,11 @@ magic_number='{{ magic_number }}'
 
 echo \"Hello, from $name!
 The magic number is $magic_number.\"";
-    debug!("Creating file {} with contents:\n{}", app_path.display(), app_code);
+    debug!(
+        "Creating file {} with contents:\n{}",
+        app_path.display(),
+        app_code
+    );
     let mut app_file = File::create(app_path)?;
     app_file.write_all(app_code.as_bytes())?;
 
@@ -94,7 +107,11 @@ echo \"The magic number is $magic_number.\" >> README.md
 # Make the app script executable
 chmod +x app.sh
 ";
-    debug!("Creating file {} with contents:\n{}", script_path.display(), script_code);
+    debug!(
+        "Creating file {} with contents:\n{}",
+        script_path.display(),
+        script_code
+    );
     let mut script_file = File::create(Path::new(&script_path))?;
     script_file.write_all(script_code.as_bytes())?;
 
@@ -103,7 +120,8 @@ chmod +x app.sh
     fs::set_permissions(script_path, permissions)?;
 
     let readme_path = dir.join("README.md");
-    let readme_text = format!("# Rendr Blueprint: {}
+    let readme_text = format!(
+        "# Rendr Blueprint: {}
 
 Welcome! This is your new [Rendr](https://github.com/jamf/rendr) blueprint!
 
@@ -123,8 +141,14 @@ Then, run the app:
     cd <project name>
     ./app.sh
 
-", name);
-    debug!("Creating file {} with contents:\n{}", readme_path.display(), readme_text);
+",
+        name
+    );
+    debug!(
+        "Creating file {} with contents:\n{}",
+        readme_path.display(),
+        readme_text
+    );
     let mut readme_file = File::create(readme_path)?;
     readme_file.write_all(readme_text.as_bytes())?;
 

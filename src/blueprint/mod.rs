@@ -11,6 +11,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
+use git2::{IndexAddOption, Oid, Repository, Signature};
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use serde_yaml;
@@ -24,23 +25,6 @@ use source::Source;
 pub use values::Values;
 
 type DynError = Box<dyn Error>;
-
-#[derive(Clone)]
-pub struct BlueprintAuth {
-    user: Option<String>,
-    password: Option<String>,
-    ssh_key: Option<String>,
-}
-
-impl BlueprintAuth {
-    pub fn new(user: Option<String>, password: Option<String>, ssh_key: Option<String>) -> Self {
-        BlueprintAuth {
-            user,
-            password,
-            ssh_key,
-        }
-    }
-}
 
 pub struct Blueprint {
     pub auth: Option<BlueprintAuth>,
@@ -154,9 +138,10 @@ impl Blueprint {
         engine: &TE,
         values: &Values,
         output_dir: &Path,
+        git_init_flag: bool,
+        no_git_init_flag: bool,
         dry_run: bool,
     ) -> Result<(), DynError> {
-
         // Create our output directory if it doesn't exist yet.
         debug!("Creating root project dir {:?}", &output_dir);
         if !output_dir.is_dir() {
@@ -200,14 +185,20 @@ impl Blueprint {
             }
         }
 
-        // Run post-render script
-        if let Some(post_render_script) = &self.post_render_script {
-            post_render_script.run(output_dir, &values)?;
+        // Initialize Git repo if required
+        if git_init_flag || (self.is_git_init_enabled() && !no_git_init_flag) {
+            debug!("Initializing Git repository");
+            Blueprint::git_init(&output_dir)?;
         }
 
         // Generate .rendr.yaml metadata file
         let source = self.source.to_string(output_dir);
         self.generate_rendr_file(&source, &output_dir, &values, dry_run)?;
+
+        // Run post-render script
+        if let Some(post_render_script) = &self.post_render_script {
+            post_render_script.run(output_dir, &values)?;
+        }
 
         Ok(())
     }
@@ -263,11 +254,33 @@ impl Blueprint {
             }
         }
 
-        let scripts = self.get_upgrade_scripts();
-        self.run_upgrade_scripts(scripts, output_dir, values, dry_run)?;
         self.generate_rendr_file(&source, &output_dir, &values, dry_run)?;
 
+        let scripts = self.get_upgrade_scripts();
+        self.run_upgrade_scripts(scripts, output_dir, values, dry_run)?;
+
         Ok(())
+    }
+
+    fn git_init(dir: &Path) -> Result<Oid, git2::Error> {
+        let repo = Repository::init(dir).expect("failed to initialize Git repository");
+
+        // First use the config to initialize a commit signature for the user
+        let sig = match repo.signature() {
+            Ok(signature) => signature,
+            Err(_) => Signature::now("rendr", "rendr@github.com")?,
+        };
+
+        let tree_id = {
+            let mut index = repo.index()?;
+            index.add_all(["."].iter(), IndexAddOption::DEFAULT, None)?;
+            index.write()?;
+            index.write_tree()?
+        };
+
+        let message = "Initial project generated with rendr";
+        let tree = repo.find_tree(tree_id)?;
+        repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &[])
     }
 
     fn generate_rendr_file<'s>(
@@ -329,6 +342,23 @@ impl Blueprint {
         }
 
         Ok(())
+    }
+}
+
+#[derive(Clone)]
+pub struct BlueprintAuth {
+    user: Option<String>,
+    password: Option<String>,
+    ssh_key: Option<String>,
+}
+
+impl BlueprintAuth {
+    pub fn new(user: Option<String>, password: Option<String>, ssh_key: Option<String>) -> Self {
+        BlueprintAuth {
+            user,
+            password,
+            ssh_key,
+        }
     }
 }
 
@@ -545,9 +575,9 @@ impl Display for ScriptError {
 
 impl Display for Blueprint {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        writeln!(f, "{} v{}", &self.metadata.name, &self.metadata.version)?;
-        writeln!(f, "{}", &self.metadata.author)?;
-        writeln!(f, "{}", &self.metadata.description)?;
+        writeln!(f, "Blueprint: {} v{}", &self.metadata.name, &self.metadata.version)?;
+        writeln!(f, "Description: {}", &self.metadata.description)?;
+        writeln!(f, "Author: {}", &self.metadata.author)?;
 
         Ok(())
     }
@@ -629,7 +659,14 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&engine, &test_values(), output_dir.path(), false)
+            .render(
+                &engine,
+                &test_values(),
+                output_dir.path(),
+                false,
+                false,
+                false,
+            )
             .unwrap();
 
         let test = fs::read_to_string(output_dir.path().join("test.yaml")).unwrap();
@@ -650,7 +687,14 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&engine, &test_values(), output_dir.path(), false)
+            .render(
+                &engine,
+                &test_values(),
+                output_dir.path(),
+                false,
+                false,
+                false,
+            )
             .unwrap();
 
         let test = fs::read_to_string(output_dir.path().join("dir/test.yaml")).unwrap();
@@ -668,7 +712,14 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&engine, &test_values(), output_dir.path(), false)
+            .render(
+                &engine,
+                &test_values(),
+                output_dir.path(),
+                false,
+                false,
+                false,
+            )
             .unwrap();
 
         let excluded_file = fs::read_to_string(output_dir.path().join("excluded_file")).unwrap();
@@ -685,7 +736,14 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&engine, &test_values(), output_dir.path(), false)
+            .render(
+                &engine,
+                &test_values(),
+                output_dir.path(),
+                false,
+                false,
+                false,
+            )
             .unwrap();
 
         let excluded_file1 =
@@ -728,12 +786,50 @@ mod tests {
         let engine = Tmplpp::new();
 
         blueprint
-            .render(&engine, &test_values(), output_dir.path(), false)
+            .render(
+                &engine,
+                &test_values(),
+                output_dir.path(),
+                false,
+                false,
+                false,
+            )
             .unwrap();
 
         let script_output = fs::read_to_string(output_dir.path().join("script_output.md")).unwrap();
 
         assert_eq!(script_output.as_str(), "something123");
+    }
+
+    #[test]
+    fn git_init_works() -> Result<(), Box<dyn Error>> {
+        use git2::RepositoryState;
+        use tempdir::TempDir;
+
+        let dir = TempDir::new("my-project").unwrap();
+        std::fs::write(dir.path().join("foo"), "foo")?;
+
+        Blueprint::git_init(dir.path())?;
+
+        let repo = Repository::open(dir.path())?;
+
+        // General "Is the repo in the expected and sane state?" tests
+        assert!(!repo.is_empty()?, "the repository was empty");
+        assert_eq!(
+            RepositoryState::Clean,
+            repo.state(),
+            "the repository wasn't in a clean state"
+        );
+        assert!(!repo.head_detached()?, "the repository head was detached");
+        repo.head()?;
+        assert!(dir.path().join("foo").exists());
+
+        assert!(
+            dir.path().join(".git/index").exists(),
+            "the git index file doesn't exist"
+        );
+
+        Ok(())
     }
 
     // Test helpers
