@@ -1,15 +1,15 @@
 use std::collections::HashMap;
 use std::error::Error;
+use std::fs;
 use std::io::{self, Write};
 use std::path::Path;
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
 use clap::ArgMatches;
-use git2::{IndexAddOption, Oid, Repository, Signature};
 use log::{debug, error, info};
-use notify::{watcher, RecursiveMode, Watcher};
 use notify::DebouncedEvent;
+use notify::{watcher, RecursiveMode, Watcher};
 use text_io::read;
 
 use rendr::blueprint::{Blueprint, BlueprintAuth, ValueSpec};
@@ -61,6 +61,36 @@ pub fn init(args: &ArgMatches) -> Result<(), DynError> {
     Ok(())
 }
 
+fn init_scaffold(
+    blueprint: &Blueprint,
+    args: &ArgMatches,
+    values: &HashMap<&str, &str>,
+) -> Result<(), DynError> {
+    // Parse CLI arguments.
+    let output_dir = Path::new(args.value_of("dir").unwrap_or("."));
+    let dry_run = args.is_present("dry-run");
+
+    println!("{}", blueprint);
+
+    info!(
+        "Output directory: {:?}. Creating your new scaffold...",
+        &output_dir
+    );
+
+    let engine = templating::Tmplpp::new();
+    blueprint.render(
+        &engine,
+        &values.into(),
+        &output_dir,
+        args.is_present("git-init"),
+        args.is_present("no-git-init"),
+        dry_run,
+    )?;
+    info!("Success. Enjoy!");
+
+    Ok(())
+}
+
 fn watch(
     blueprint: &Blueprint,
     scaffold_path: impl AsRef<Path> + Copy,
@@ -86,18 +116,18 @@ fn watch(
                 debug!("Watch event: {:?}", event);
                 match event {
                     #[allow(unused_variables)]
-                    DebouncedEvent::Create(path) |
-                    DebouncedEvent::Chmod(path)  |
-                    DebouncedEvent::Remove(path) |
-                    DebouncedEvent::Rename(path, _) |
-                    DebouncedEvent::Write(path) => {
+                    DebouncedEvent::Create(path)
+                    | DebouncedEvent::Chmod(path)
+                    | DebouncedEvent::Remove(path)
+                    | DebouncedEvent::Rename(path, _)
+                    | DebouncedEvent::Write(path) => {
                         info!("");
                         info!("Blueprint changed! Recreating scaffold...");
-                        std::fs::remove_dir_all(scaffold_path)?;
+                        rm_all(scaffold_path.as_ref())?;
                         if let Err(e) = init_scaffold(blueprint, args, values) {
                             error!("{}", e);
                         }
-                    },
+                    }
                     _ => debug!("Skipping event {:?}", event),
                 }
             }
@@ -106,57 +136,19 @@ fn watch(
     }
 }
 
-fn init_scaffold(
-    blueprint: &Blueprint,
-    args: &ArgMatches,
-    values: &HashMap<&str, &str>,
-) -> Result<(), DynError> {
-    // Parse CLI arguments.
-    let output_dir = Path::new(args.value_of("dir").unwrap_or("."));
-    let dry_run = args.is_present("dry-run");
+fn rm_all(p: &Path) -> Result<(), DynError> {
+    let paths = fs::read_dir(p).unwrap();
 
-    println!("{}", blueprint);
-
-    info!(
-        "Output directory: {:?}. Creating your new scaffold...",
-        &output_dir
-    );
-
-    let engine = templating::Tmplpp::new();
-
-    blueprint.render(&engine, &values.into(), &output_dir, dry_run)?;
-
-    if args.is_present("git-init")
-        || (blueprint.is_git_init_enabled() && !args.is_present("no-git-init"))
-    {
-        debug!("Initializing Git repository");
-        git_init(&output_dir)?;
+    for path in paths {
+        let path = path.unwrap().path();
+        if path.is_dir() {
+            fs::remove_dir_all(path)?;
+        } else {
+            fs::remove_file(path)?;
+        }
     }
 
-    info!("Success. Enjoy!");
-
     Ok(())
-}
-
-fn git_init(dir: &Path) -> Result<Oid, git2::Error> {
-    let repo = Repository::init(dir).expect("failed to initialize Git repository");
-
-    // First use the config to initialize a commit signature for the user
-    let sig = match repo.signature() {
-        Ok(signature) => signature,
-        Err(_) => Signature::now("rendr", "rendr@github.com")?,
-    };
-
-    let tree_id = {
-        let mut index = repo.index()?;
-        index.add_all(["."].iter(), IndexAddOption::DEFAULT, None)?;
-        index.write()?;
-        index.write_tree()?
-    };
-
-    let message = "Initial project generated with rendr";
-    let tree = repo.find_tree(tree_id)?;
-    repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &[])
 }
 
 type ValueFromPrompt<'s> = (&'s str, String);
@@ -188,35 +180,4 @@ fn correct_values_are_parsed_correctly() {
 
     assert_eq!(foo, "foo");
     assert_eq!(bar, "bar");
-}
-
-#[test]
-fn git_init_works() -> Result<(), Box<dyn Error>> {
-    use git2::RepositoryState;
-    use tempdir::TempDir;
-
-    let dir = TempDir::new("my-project").unwrap();
-    std::fs::write(dir.path().join("foo"), "foo")?;
-
-    git_init(dir.path())?;
-
-    let repo = Repository::open(dir.path())?;
-
-    // General "Is the repo in the expected and sane state?" tests
-    assert!(!repo.is_empty()?, "the repository was empty");
-    assert_eq!(
-        RepositoryState::Clean,
-        repo.state(),
-        "the repository wasn't in a clean state"
-    );
-    assert!(!repo.head_detached()?, "the repository head was detached");
-    repo.head()?;
-    assert!(dir.path().join("foo").exists());
-
-    assert!(
-        dir.path().join(".git/index").exists(),
-        "the git index file doesn't exist"
-    );
-
-    Ok(())
 }
