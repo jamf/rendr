@@ -8,8 +8,6 @@ _A project scaffolding tool_
 
 Check out the [User Guide](https://jamf.github.io/rendr/) for the full documentation.
 
-This project is currently under heavy development. The API is expected to change before reaching a 1.0.0 release. That said, it is functional and useful already! Try it out and provide any feedback you have by [opening an issue](https://github.com/jamf/rendr/issues).
-
 ## Features
 
 _rendr_ is a scaffolding tool which allows generating entire projects (or anything else) from blueprints, using standard templating engines and simple customization via parameters. It is generic enough to apply to a wide variety of applications and tech stacks, but powerful and flexible enough to provide value, fast. The tool itself is really a generic template renderer. It's up to you, the template creator, to decide what to put in your template.
