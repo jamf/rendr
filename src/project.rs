@@ -214,6 +214,7 @@ impl<'p> Project<'p> {
         values.extend(prompt_values);
 
         // Update the target version, inserting if it does not exist for some reason
+        let source_version = config.version;
         let target_version = blueprint.metadata.version.to_string();
         let v = values.entry("version").or_insert(target_version.as_str());
         *v = target_version.as_str();
@@ -231,6 +232,7 @@ impl<'p> Project<'p> {
                 &values.into(),
                 &self.path,
                 &config.source,
+                &source_version,
                 dry_run,
             )
             .map_err(|e| UpgradeError::RenderError(anyhow!("error rendering upgrade: {}", e)))?;

@@ -209,6 +209,7 @@ impl Blueprint {
         values: &Values,
         output_dir: &Path,
         source: &str,
+        source_version: &u32,
         dry_run: bool,
     ) -> Result<(), DynError> {
         info!("Upgrading to blueprint version {}", &self.metadata.version);
@@ -256,7 +257,8 @@ impl Blueprint {
 
         self.generate_rendr_file(&source, &output_dir, &values, dry_run)?;
 
-        let scripts = self.get_upgrade_scripts();
+        let target_version = self.metadata.version;
+        let scripts = self.get_upgrade_scripts(&source_version, &target_version);
         self.run_upgrade_scripts(scripts, output_dir, values, dry_run)?;
 
         Ok(())
@@ -307,11 +309,11 @@ impl Blueprint {
         Ok(())
     }
 
-    pub fn get_upgrade_scripts(&self) -> Vec<&UpgradeSpec> {
+    pub fn get_upgrade_scripts(&self, source_version: &u32, target_version: &u32) -> Vec<&UpgradeSpec> {
         self.metadata
             .upgrades
             .iter()
-            .filter(|it| it.version == self.metadata.version)
+            .filter(|it| it.version > *source_version && it.version <= *target_version)
             .collect()
     }
 
@@ -330,13 +332,11 @@ impl Blueprint {
         );
 
         for script in scripts {
-            if script.version == target_version {
-                if let Some(mut s) = self.find_script(&script.script).unwrap() {
-                    s.executable = Some(String::from(&script.executable));
-                    println!("Running upgrade script: {}", s.name);
-                    if !dry_run {
-                        s.run(output_dir, values)?;
-                    }
+            if let Some(mut s) = self.find_script(&script.script).unwrap() {
+                s.executable = Some(String::from(&script.executable));
+                println!("Running upgrade script: {}", s.name);
+                if !dry_run {
+                    s.run(output_dir, values)?;
                 }
             }
         }
